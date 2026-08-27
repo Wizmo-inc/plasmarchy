@@ -11,6 +11,7 @@ files owned by the Omarchy package.
 ## Features
 
 - Bottom Omarchy Quickshell bar in a Plasma session
+- Theme-aware quick launchers for Files, Terminal, and Chrome before open windows
 - KWin-aware window task buttons with click-to-minimize behavior
 - Plasma virtual desktop switcher and KRunner shortcut
 - Omarchy application and agent menus
@@ -28,6 +29,7 @@ files owned by the Omarchy package.
 
 - A current Omarchy installation
 - KDE Plasma 6 and KWin
+- Dolphin (the default pinned file manager)
 - Quickshell (`qs`), `qdbus6`, `jq`, `perl`, and `patch`
 - `plasma-apply-colorscheme`
 - Spectacle and `wl-copy` (used as the KWin-compatible screenshot backend)
@@ -64,6 +66,13 @@ not redistribute those assets.
 
 Log out, choose **Plasma (Wayland)**, and log back in. Existing Hyprland and
 `~/.config/omarchy/shell.json` settings are left intact.
+
+### Customize quick launchers
+
+Pinned apps are the `launchers` array on the `plasma.tasks` entry in
+`~/.config/omarchy/plasma-shell.json`. Each entry accepts a tooltip `title`,
+theme icon name, and argument-safe command array. Saving the file hot-reloads
+the bar; no logout or restart is required.
 
 ## Diagnose and remove
 

@@ -38,14 +38,14 @@ if $install_deps; then
     printf '%s\n' '--install-deps currently supports Arch Linux only.' >&2
     exit 1
   }
-  sudo pacman -S --needed plasma-meta qt6-tools patch python spectacle wl-clipboard
+  sudo pacman -S --needed plasma-meta dolphin qt6-tools patch python spectacle wl-clipboard
 fi
 
 require() {
   command -v "$1" >/dev/null 2>&1 || { printf 'Missing dependency: %s\n' "$1" >&2; exit 1; }
 }
 
-for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasma-apply-colorscheme; do
+for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasma-apply-colorscheme dolphin omarchy-launch-terminal omarchy-launch-browser; do
   require "$command_name"
 done
 

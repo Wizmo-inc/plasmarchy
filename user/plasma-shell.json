@@ -22,7 +22,24 @@
           "id": "plasma.workspaces"
         },
         {
-          "id": "plasma.tasks"
+          "id": "plasma.tasks",
+          "launchers": [
+            {
+              "title": "Files",
+              "icon": "system-file-manager",
+              "command": ["dolphin"]
+            },
+            {
+              "title": "Terminal",
+              "icon": "utilities-terminal",
+              "command": ["omarchy-launch-terminal"]
+            },
+            {
+              "title": "Google Chrome",
+              "icon": "google-chrome",
+              "command": ["omarchy-launch-browser"]
+            }
+          ]
         },
         {
           "id": "omarchy.active-window",

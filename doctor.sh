@@ -20,7 +20,7 @@ check_file() {
   fi
 }
 
-for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasmashell; do
+for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasmashell dolphin omarchy-launch-terminal omarchy-launch-browser; do
   check_command "$command_name"
 done
 check_file /usr/share/omarchy/shell/shell.qml
@@ -76,6 +76,14 @@ fi
 
 if command -v jq >/dev/null 2>&1 && ! jq -e . "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1; then
   printf '%s\n' 'FAIL plasma-shell.json is invalid JSON'
+  failures=$((failures + 1))
+fi
+
+if jq -e '.bar.layout.left[] | select(.id == "plasma.tasks") | .launchers | length > 0' \
+  "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1; then
+  printf '%s\n' 'ok   quick launchers are configured before window tasks'
+else
+  printf '%s\n' 'FAIL quick launchers are missing from plasma.tasks'
   failures=$((failures + 1))
 fi
 

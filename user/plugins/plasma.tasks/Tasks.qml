@@ -9,11 +9,21 @@ BarWidget {
   id: root
   moduleName: "plasma.tasks"
 
+  property var launchers: setting("launchers", [
+    { title: "Files", icon: "system-file-manager", command: ["dolphin"] },
+    { title: "Terminal", icon: "utilities-terminal", command: ["omarchy-launch-terminal"] },
+    { title: "Google Chrome", icon: "google-chrome", command: ["omarchy-launch-browser"] }
+  ])
   property var tasks: []
   property string lastActivatedId: ""
 
   function refresh() {
     if (!taskQuery.running) taskQuery.running = true
+  }
+
+  function launchApp(launcher) {
+    if (!launcher || !launcher.command || launcher.command.length === 0) return
+    Quickshell.execDetached(launcher.command)
   }
 
   function applyListing(output) {
@@ -81,7 +91,7 @@ BarWidget {
     onTriggered: root.refresh()
   }
 
-  visible: !vertical && tasks.length > 0
+  visible: !vertical && (launchers.length > 0 || tasks.length > 0)
   implicitWidth: visible ? taskRow.implicitWidth : 0
   implicitHeight: barSize
 
@@ -89,6 +99,65 @@ BarWidget {
     id: taskRow
     anchors.fill: parent
     spacing: Style.space(2)
+
+    Repeater {
+      model: root.launchers
+
+      delegate: Item {
+        id: launcher
+        required property var modelData
+
+        width: root.barSize
+        height: root.barSize
+
+        Rectangle {
+          anchors.fill: parent
+          anchors.margins: Style.space(2)
+          radius: Style.cornerRadius
+          color: launcherMouse.containsMouse
+              ? Style.hoverFillFor(root.bar ? root.bar.barForeground : Color.foreground,
+                                   root.bar ? root.bar.urgent : Color.accent)
+              : "transparent"
+
+          Behavior on color { ColorAnimation { duration: 140 } }
+        }
+
+        Kirigami.Icon {
+          anchors.centerIn: parent
+          width: Style.space(18)
+          height: width
+          source: launcher.modelData.icon || "application-x-executable"
+          scale: launcherMouse.containsMouse ? 1.13 : 1
+
+          Behavior on scale {
+            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+          }
+        }
+
+        MouseArea {
+          id: launcherMouse
+          anchors.fill: parent
+          acceptedButtons: Qt.LeftButton
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+
+          onClicked: root.launchApp(launcher.modelData)
+          onEntered: if (root.bar)
+            root.bar.showTooltip(launcher, "Launch " + (launcher.modelData.title || "application"))
+          onExited: if (root.bar) root.bar.hideTooltip(launcher)
+        }
+      }
+    }
+
+    Rectangle {
+      visible: root.launchers.length > 0 && root.tasks.length > 0
+      width: visible ? 1 : 0
+      height: Style.space(16)
+      anchors.verticalCenter: parent.verticalCenter
+      radius: 1
+      color: root.bar ? root.bar.barForeground : Color.foreground
+      opacity: 0.22
+    }
 
     Repeater {
       model: root.tasks
