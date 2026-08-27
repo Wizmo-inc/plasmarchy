@@ -1,0 +1,23 @@
+--- a/contents/ui/FolderViewLayer.qml
++++ b/contents/ui/FolderViewLayer.qml
+@@ -362,6 +362,12 @@
+         id: actionSeparator
+         isSeparator: true
+     }
++    PlasmaCore.Action {
++        id: plasmarchyThemesAction
++        text: i18nc("@action:inmenu", "Themes")
++        icon.name: "preferences-desktop-theme"
++        onTriggered: Qt.openUrlExternally("plasmarchy://themes")
++    }
+ 
+     Component.onCompleted: {
+         if (!Plasmoid.isContainment) {
+@@ -377,6 +383,7 @@
+             }
+         }
+ 
++        Plasmoid.contextualActions.push(plasmarchyThemesAction);
+         Plasmoid.contextualActions.push(actionSeparator);
+ 
+         Plasmoid.contextualActionsAboutToShow.connect(updateContextualActions);

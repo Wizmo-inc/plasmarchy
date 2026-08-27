@@ -88,7 +88,10 @@ backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
 backup "$HOME/.local/bin/omarchy-capture-screenshot"
 backup "$HOME/.local/bin/plasmarchy-quicklaunch"
+backup "$HOME/.local/bin/plasmarchy-themes-handler"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
+backup "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
+backup "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder"
 backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 backup "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
@@ -103,6 +106,7 @@ mkdir -p \
   "$HOME/.config/autostart" \
   "$HOME/.local/bin" \
   "$HOME/.local/share/applications" \
+  "$HOME/.local/share/plasma/plasmoids" \
   "$HOME/.local/share/plasma/shells" \
   "$HOME/.local/share/kwin/scripts"
 
@@ -139,7 +143,27 @@ done
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/plasmarchy-quicklaunch" "$HOME/.local/bin/plasmarchy-quicklaunch"
+install -m 0755 "$repo_dir/user/plasmarchy-themes-handler" "$HOME/.local/bin/plasmarchy-themes-handler"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
+install -m 0644 "$repo_dir/user/org.plasmarchy.themes.desktop" \
+  "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
+
+# Derive Plasma's exact installed Folder View containment and add the Omarchy
+# theme chooser to its blank-desktop contextual actions. The user copy shadows
+# the package with the same plugin ID; package-owned files remain untouched.
+desktop_containment_source=/usr/share/plasma/plasmoids/org.kde.desktopcontainment
+folder_metadata_source=/usr/share/plasma/plasmoids/org.kde.plasma.folder/metadata.json
+desktop_containment_target=$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder
+[[ -f $desktop_containment_source/contents/ui/FolderViewLayer.qml && -f $folder_metadata_source ]] || {
+  printf '%s\n' 'The installed Plasma Folder View containment is incomplete.' >&2
+  exit 1
+}
+rm -rf -- "$desktop_containment_target"
+cp -a -- "$desktop_containment_source" "$desktop_containment_target"
+jq 'del(."X-Plasma-RootPath")' "$folder_metadata_source" > "$desktop_containment_target/metadata.json.tmp"
+mv -- "$desktop_containment_target/metadata.json.tmp" "$desktop_containment_target/metadata.json"
+patch --silent --forward -d "$desktop_containment_target" -p1 \
+  < "$repo_dir/patches/desktop-containment-themes.patch"
 
 # Omarchy defaults to imv, whose intentionally minimal tiling-WM surface has
 # no visible window controls in Plasma. Use KDE's native viewer so images have
@@ -148,6 +172,8 @@ for image_mime in image/png image/jpeg image/gif image/bmp image/webp image/tiff
   kwriteconfig6 --file mimeapps.list --group 'Default Applications' \
     --key "$image_mime" org.kde.gwenview.desktop
 done
+kwriteconfig6 --file mimeapps.list --group 'Default Applications' \
+  --key x-scheme-handler/plasmarchy org.plasmarchy.themes.desktop
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 
 rm -rf -- "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
@@ -269,6 +295,7 @@ printf 'installed_at=%q\nbackup_dir=%q\n' "$stamp" "$backup_dir" > "$state_dir/i
 "$repo_dir/doctor.sh" || true
 
 if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]]; then
+  systemctl --user try-restart plasma-plasmashell.service >/dev/null 2>&1 || true
   # The qs process command contains the configuration directory, not the
   # shell.qml filename. Ask Quickshell to stop the exact instance so updates
   # cannot leave an old plugin component running behind the new files.

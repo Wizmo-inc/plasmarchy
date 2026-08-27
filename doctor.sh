@@ -40,6 +40,8 @@ fi
 check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml"
 check_file "$HOME/.local/bin/omarchy-capture-screenshot"
 check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
+check_file "$HOME/.local/bin/plasmarchy-themes-handler"
+check_file "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml"
 
 if [[ $(kreadconfig6 --file kscreenlockerrc --group Greeter --key Theme 2>/dev/null) == org.omarchy.plasma.hybrid ]]; then
   printf '%s\n' 'ok   Omarchy Plasma idle lock screen is selected'
@@ -112,6 +114,15 @@ if [[ $(xdg-mime query default image/png 2>/dev/null) == org.kde.gwenview.deskto
   printf '%s\n' 'ok   images open in Plasma-native Gwenview windows'
 else
   printf '%s\n' 'FAIL image files are not associated with Gwenview'
+  failures=$((failures + 1))
+fi
+
+if [[ $(xdg-mime query default x-scheme-handler/plasmarchy 2>/dev/null) == org.plasmarchy.themes.desktop ]] &&
+   rg -q 'plasmarchyThemesAction' \
+     "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   desktop context menu includes Plasmarchy Themes'
+else
+  printf '%s\n' 'FAIL desktop Themes context action is missing'
   failures=$((failures + 1))
 fi
 

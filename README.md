@@ -18,6 +18,7 @@ files owned by the Omarchy package.
 - Show Desktop minimize/restore toggle that keeps the bottom bar visible
 - Distinct window-minimize glyph for Show Desktop instead of a display icon
 - Plasma virtual desktop switcher and KRunner shortcut
+- Desktop right-click shortcut to the Omarchy theme chooser
 - Omarchy application and agent menus
 - Omarchy Agents usage panel and the `omatask` system monitor
 - Omarchy palette, icon theme, and wallpaper synchronization into Plasma

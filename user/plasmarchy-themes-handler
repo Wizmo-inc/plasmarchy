@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec omarchy-shell shell toggle plasma.menu '{"menu":"style"}'

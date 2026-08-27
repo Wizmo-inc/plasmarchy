@@ -39,7 +39,10 @@ restore_or_remove "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 restore_or_remove "$HOME/.local/bin/omarchy-shell"
 restore_or_remove "$HOME/.local/bin/omarchy-capture-screenshot"
 restore_or_remove "$HOME/.local/bin/plasmarchy-quicklaunch"
+restore_or_remove "$HOME/.local/bin/plasmarchy-themes-handler"
 restore_or_remove "$HOME/.local/share/applications/org.omarchy.capture.desktop"
+restore_or_remove "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
+restore_or_remove "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder"
 restore_or_remove "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 restore_or_remove "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents plasma.menu omatask; do
@@ -48,6 +51,7 @@ done
 restore_or_remove "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 systemctl --user try-restart plasma-kglobalaccel.service >/dev/null 2>&1 || true
+systemctl --user try-restart plasma-plasmashell.service >/dev/null 2>&1 || true
 
 if [[ -f $state_dir/system-install.env ]] && grep -qx 'with_sddm=true' "$state_dir/system-install.env"; then
   sudo rm -rf -- /usr/local/share/sddm/themes/omarchy-plasma

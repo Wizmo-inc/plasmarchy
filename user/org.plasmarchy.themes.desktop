@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Plasmarchy Themes
+Comment=Open the Omarchy theme chooser in Plasma
+Icon=preferences-desktop-theme
+Exec=plasmarchy-themes-handler %u
+Terminal=false
+NoDisplay=true
+MimeType=x-scheme-handler/plasmarchy;

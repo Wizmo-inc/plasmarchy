@@ -124,7 +124,6 @@ BarWidget {
     modal: false
     closePolicy: QQC.Popup.CloseOnEscape
                | QQC.Popup.CloseOnPressOutside
-               | QQC.Popup.CloseOnReleaseOutside
     padding: Style.space(5)
 
     background: Rectangle {
