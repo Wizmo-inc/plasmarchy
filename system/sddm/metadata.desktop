@@ -1,0 +1,7 @@
+[SddmGreeterTheme]
+Name=Omarchy Plasma
+Description=Minimal Omarchy login theme configured for the Plasma hybrid session
+Author=Omarchy
+Type=sddm-theme
+Version=1.0
+QtVersion=6

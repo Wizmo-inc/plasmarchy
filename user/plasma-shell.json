@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "disabledPlugins": [
+    "omarchy.background",
+    "omarchy.lock",
+    "omarchy.notifications",
+    "omarchy.polkit"
+  ],
+  "idle": {
+    "screensaver": 0,
+    "lock": 0
+  },
+  "bar": {
+    "position": "bottom",
+    "transparent": false,
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [
+        {
+          "id": "plasma.launcher"
+        },
+        {
+          "id": "plasma.workspaces"
+        },
+        {
+          "id": "plasma.tasks"
+        },
+        {
+          "id": "omarchy.active-window",
+          "maxWidth": 220
+        }
+      ],
+      "center": [
+        {
+          "id": "omarchy.indicators"
+        },
+        {
+          "id": "omarchy.clock",
+          "format": "dddd HH:mm",
+          "formatAlt": "d MMMM 'W'ww yyyy",
+          "verticalFormat": "HH\n—\nmm"
+        },
+        {
+          "id": "omarchy.weather"
+        },
+        {
+          "id": "omarchy.system-update"
+        }
+      ],
+      "right": [
+        {
+          "id": "omarchy.tray"
+        },
+        {
+          "id": "omatask"
+        },
+        {
+          "id": "plasma.agents"
+        },
+        {
+          "id": "omarchy.bluetooth"
+        },
+        {
+          "id": "omarchy.network"
+        },
+        {
+          "id": "omarchy.audio"
+        },
+        {
+          "id": "omarchy.monitor"
+        },
+        {
+          "id": "omarchy.power"
+        }
+      ]
+    }
+  },
+  "plugins": [
+    {
+      "id": "omarchy.menu"
+    }
+  ]
+}

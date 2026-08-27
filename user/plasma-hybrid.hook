@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# Carry the active Omarchy palette and wallpaper into Plasma/KWin. Omarchy's
+# own shell palette is applied through the KDE-aware omarchy-shell shim.
+
+theme_root="$HOME/.local/state/omarchy/current/theme"
+colors_file="$theme_root/colors.toml"
+scheme_dir="$HOME/.local/share/color-schemes"
+scheme_file="$scheme_dir/Omarchy.colors"
+
+[[ -f $colors_file ]] || exit 0
+
+toml_color() {
+  local key="$1"
+  awk -F= -v wanted="$key" '
+    $1 ~ "^[[:space:]]*" wanted "[[:space:]]*$" {
+      value=$2
+      gsub(/[[:space:]"]/, "", value)
+      print value
+      exit
+    }
+  ' "$colors_file"
+}
+
+rgb() {
+  local value="${1#\#}"
+  printf '%d,%d,%d' "0x${value:0:2}" "0x${value:2:2}" "0x${value:4:2}"
+}
+
+background=$(toml_color background)
+lighter=$(toml_color lighter_background)
+foreground=$(toml_color foreground)
+muted=$(toml_color muted)
+accent=$(toml_color accent)
+selection=$(toml_color selection)
+
+mkdir -p "$scheme_dir"
+scheme_tmp="$scheme_file.tmp.$$"
+cat >"$scheme_tmp" <<EOF
+[General]
+Name=Omarchy
+ColorScheme=Omarchy
+shadeSortColumn=true
+
+[Colors:Window]
+BackgroundNormal=$(rgb "$background")
+ForegroundNormal=$(rgb "$foreground")
+DecorationFocus=$(rgb "$accent")
+DecorationHover=$(rgb "$accent")
+
+[Colors:View]
+BackgroundNormal=$(rgb "$background")
+ForegroundNormal=$(rgb "$foreground")
+BackgroundAlternate=$(rgb "$lighter")
+DecorationFocus=$(rgb "$accent")
+DecorationHover=$(rgb "$accent")
+
+[Colors:Button]
+BackgroundNormal=$(rgb "$lighter")
+ForegroundNormal=$(rgb "$foreground")
+DecorationFocus=$(rgb "$accent")
+DecorationHover=$(rgb "$accent")
+
+[Colors:Selection]
+BackgroundNormal=$(rgb "$accent")
+ForegroundNormal=$(rgb "$background")
+
+[Colors:Tooltip]
+BackgroundNormal=$(rgb "$background")
+ForegroundNormal=$(rgb "$foreground")
+
+[Colors:Complementary]
+BackgroundNormal=$(rgb "$background")
+ForegroundNormal=$(rgb "$foreground")
+BackgroundAlternate=$(rgb "$lighter")
+
+[WM]
+activeBackground=$(rgb "$background")
+activeForeground=$(rgb "$foreground")
+inactiveBackground=$(rgb "$background")
+inactiveForeground=$(rgb "$muted")
+activeBlend=$(rgb "$accent")
+inactiveBlend=$(rgb "$selection")
+EOF
+mv "$scheme_tmp" "$scheme_file"
+
+plasma-apply-colorscheme Omarchy >/dev/null 2>&1 || true
+
+current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null || true)
+if [[ -f $current_background ]]; then
+  wallpaper_uri=$(jq -Rn --arg value "file://$current_background" '$value')
+  qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
+    "var ds = desktops(); for (var i = 0; i < ds.length; ++i) { ds[i].wallpaperPlugin = 'org.kde.image'; ds[i].currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General']; ds[i].writeConfig('Image', $wallpaper_uri); }" \
+    >/dev/null 2>&1 || true
+fi

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "plasma.workspaces",
+  "name": "Plasma Workspaces",
+  "version": "1.0.0",
+  "author": "Wizmo-inc contributors",
+  "license": "MIT",
+  "description": "Omarchy workspace pills backed by KWin",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "Workspaces.qml"
+  },
+  "barWidget": {
+    "displayName": "Plasma Workspaces",
+    "description": "KWin virtual desktop switcher",
+    "category": "Compositor",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}

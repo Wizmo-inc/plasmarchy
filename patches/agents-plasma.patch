@@ -1,0 +1,13 @@
+--- a/Panel.qml
++++ b/Panel.qml
+@@ -62,4 +62,9 @@
+   function launchAgent() {
+-    if (root.bar) root.bar.run("omarchy-agent --pick")
++    Quickshell.execDetached([
++      "qs", "ipc", "-n", "-p",
++      Quickshell.env("HOME") + "/.config/quickshell/plasma-omarchy",
++      "call", "--", "shell", "summon", "omarchy.menu",
++      JSON.stringify({ "menu": "agent" })
++    ])
+     root.close()
+   }
