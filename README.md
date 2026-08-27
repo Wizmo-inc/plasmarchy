@@ -13,7 +13,7 @@ files owned by the Omarchy package.
 - Bottom Omarchy Quickshell bar in a Plasma session
 - Theme-aware quick launchers for Files, Terminal, and Chrome before open windows
 - KWin-aware window task buttons with click-to-minimize behavior
-- Native Show Desktop toggle at the far-right edge of the bar
+- Show Desktop minimize/restore toggle that keeps the bottom bar visible
 - Plasma virtual desktop switcher and KRunner shortcut
 - Omarchy application and agent menus
 - Omarchy Agents usage panel and the `omatask` system monitor

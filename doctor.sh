@@ -28,6 +28,7 @@ check_file "$HOME/.config/omarchy/plasma-shell.json"
 check_file "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.show-desktop/ShowDesktop.qml"
+check_file "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop/contents/code/main.js"
 if [[ -f $HOME/.config/omarchy/plugins/plasma.agents/Panel.qml ]] ||
    compgen -G "$HOME/.config/omarchy/plugins/*.agents/Panel.qml" >/dev/null; then
   printf '%s\n' 'ok   Agents plugin'
@@ -100,6 +101,18 @@ if [[ $(jq -r '.bar.layout.right[-1].id // empty' "$HOME/.config/omarchy/plasma-
 else
   printf '%s\n' 'FAIL Show Desktop is not the final right-side bar action'
   failures=$((failures + 1))
+fi
+
+if qdbus6 org.kde.KWin /Scripting >/dev/null 2>&1; then
+  if qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.isScriptLoaded \
+    plasmarchy-show-desktop 2>/dev/null | grep -qx true; then
+    printf '%s\n' 'ok   Plasmarchy minimize-all KWin script is loaded'
+  else
+    printf '%s\n' 'FAIL Plasmarchy minimize-all KWin script is not loaded'
+    failures=$((failures + 1))
+  fi
+else
+  printf '%s\n' 'note KWin scripting unavailable (expected outside a running Plasma session)'
 fi
 
 if qdbus6 org.kde.KWin /KWin org.kde.KWin.currentDesktop >/dev/null 2>&1; then

@@ -78,11 +78,13 @@ backup "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
 backup "$HOME/.config/ksplashrc"
 backup "$HOME/.config/kscreenlockerrc"
 backup "$HOME/.config/kglobalshortcutsrc"
+backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
 backup "$HOME/.local/bin/omarchy-capture-screenshot"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
+backup "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents omatask; do
   backup "$HOME/.config/omarchy/plugins/$plugin_id"
@@ -95,7 +97,8 @@ mkdir -p \
   "$HOME/.config/autostart" \
   "$HOME/.local/bin" \
   "$HOME/.local/share/applications" \
-  "$HOME/.local/share/plasma/shells"
+  "$HOME/.local/share/plasma/shells" \
+  "$HOME/.local/share/kwin/scripts"
 
 install -m 0644 "$repo_dir/user/plasma-shell.json" "$HOME/.config/omarchy/plasma-shell.json"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop omatask; do
@@ -123,6 +126,20 @@ done
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
+
+rm -rf -- "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
+cp -a -- "$repo_dir/user/kwin/scripts/plasmarchy-show-desktop" \
+  "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
+kwriteconfig6 --file kwinrc --group Plugins \
+  --key plasmarchy-show-desktopEnabled true --notify
+if qdbus6 org.kde.KWin /Scripting >/dev/null 2>&1; then
+  qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript \
+    plasmarchy-show-desktop >/dev/null 2>&1 || true
+  qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript \
+    "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop/contents/code/main.js" \
+    plasmarchy-show-desktop >/dev/null 2>&1 || true
+  qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.start >/dev/null 2>&1 || true
+fi
 
 # KScreenLocker loads its UI from a Plasma Shell package. Derive a complete,
 # version-matched package locally, replacing only the lock frontend.

@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "plasma.show-desktop",
   "name": "Plasma Show Desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Wizmo-inc contributors",
   "license": "MIT",
-  "description": "Toggles KWin's native Show Desktop state from the Omarchy bar.",
+  "description": "Minimizes KWin application windows while keeping the Omarchy bar visible.",
   "kinds": ["bar-widget"],
   "entryPoints": {
     "barWidget": "ShowDesktop.qml"

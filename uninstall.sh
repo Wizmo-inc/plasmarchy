@@ -14,6 +14,8 @@ backup_dir=$state_dir/latest-backup
   exit 1
 }
 
+qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript \
+  plasmarchy-show-desktop >/dev/null 2>&1 || true
 qs kill --any-display --path "$HOME/.config/quickshell/plasma-omarchy" >/dev/null 2>&1 || true
 
 restore_or_remove() {
@@ -31,11 +33,13 @@ restore_or_remove "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
 restore_or_remove "$HOME/.config/ksplashrc"
 restore_or_remove "$HOME/.config/kscreenlockerrc"
 restore_or_remove "$HOME/.config/kglobalshortcutsrc"
+restore_or_remove "$HOME/.config/kwinrc"
 restore_or_remove "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 restore_or_remove "$HOME/.local/bin/omarchy-shell"
 restore_or_remove "$HOME/.local/bin/omarchy-capture-screenshot"
 restore_or_remove "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 restore_or_remove "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
+restore_or_remove "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents omatask; do
   restore_or_remove "$HOME/.config/omarchy/plugins/$plugin_id"
 done

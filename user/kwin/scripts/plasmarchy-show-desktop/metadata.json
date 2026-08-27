@@ -1,0 +1,17 @@
+{
+  "KPackageStructure": "KWin/Script",
+  "KPlugin": {
+    "Authors": [
+      {
+        "Name": "Wizmo-inc contributors"
+      }
+    ],
+    "Description": "Minimizes application windows while keeping the Plasmarchy bar visible.",
+    "Icon": "user-desktop",
+    "Id": "plasmarchy-show-desktop",
+    "License": "MIT",
+    "Name": "Plasmarchy Show Desktop",
+    "Version": "1.0.0"
+  },
+  "X-Plasma-API": "javascript"
+}
