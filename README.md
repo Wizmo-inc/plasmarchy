@@ -22,6 +22,7 @@ files owned by the Omarchy package.
 - Minimal login flow with Plasma's redundant startup splash disabled
 - Matching minimal Omarchy idle/unlock screen backed by KScreenLocker
 - Print Screen routed through the Omarchy save, clipboard, notification, and editor flow
+- Omarchy notification popups enabled for screenshot and system feedback
 
 ## Requirements
 

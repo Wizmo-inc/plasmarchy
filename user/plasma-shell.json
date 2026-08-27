@@ -3,7 +3,6 @@
   "disabledPlugins": [
     "omarchy.background",
     "omarchy.lock",
-    "omarchy.notifications",
     "omarchy.polkit"
   ],
   "idle": {

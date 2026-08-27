@@ -44,10 +44,21 @@ else
   failures=$((failures + 1))
 fi
 
-if [[ $(kreadconfig6 --file kglobalshortcutsrc --group org_omarchy_capture_desktop --key _launch 2>/dev/null) == Print,* ]]; then
-  printf '%s\n' 'ok   Print opens the Omarchy screenshot flow'
+if qdbus6 org.kde.kglobalaccel /kglobalaccel >/dev/null 2>&1; then
+  print_owners=$(qdbus6 --literal org.kde.kglobalaccel /kglobalaccel \
+    org.kde.KGlobalAccel.getGlobalShortcutsByKey 16777225 2>/dev/null)
+  if [[ $print_owners == *org.omarchy.capture.desktop* &&
+        $print_owners != *org_omarchy_capture_desktop* &&
+        $print_owners != *org.kde.spectacle.desktop* ]]; then
+    printf '%s\n' 'ok   Print exclusively opens the Omarchy screenshot flow'
+  else
+    printf '%s\n' 'FAIL Print has a missing or conflicting screenshot shortcut'
+    failures=$((failures + 1))
+  fi
+elif grep -q '^X-KDE-Shortcuts=Print$' "$HOME/.local/share/applications/org.omarchy.capture.desktop" 2>/dev/null; then
+  printf '%s\n' 'ok   Omarchy Print desktop action is installed'
 else
-  printf '%s\n' 'FAIL Omarchy Print shortcut is not configured'
+  printf '%s\n' 'FAIL Omarchy Print desktop action is not installed'
   failures=$((failures + 1))
 fi
 

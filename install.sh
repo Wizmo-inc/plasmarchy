@@ -152,15 +152,19 @@ capture_desktop=$HOME/.local/share/applications/org.omarchy.capture.desktop
 install -m 0644 "$repo_dir/user/org.omarchy.capture.desktop" "$capture_desktop"
 kwriteconfig6 --file kglobalshortcutsrc --group org_kde_spectacle_desktop --key _launch \
   $'Meta+Shift+S,Print\tMeta+Shift+S,Launch Spectacle'
-kwriteconfig6 --file kglobalshortcutsrc --group org_omarchy_capture_desktop --key _launch \
-  'Print,Print,Omarchy Screenshot'
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 if systemctl --user is-active plasma-kglobalaccel.service >/dev/null 2>&1; then
   systemctl --user restart plasma-kglobalaccel.service
   for attempt in 1 2 3 4 5; do
-    qdbus6 org.kde.kglobalaccel /component/org_omarchy_capture_desktop >/dev/null 2>&1 && break
+    qdbus6 --literal org.kde.kglobalaccel /kglobalaccel \
+      org.kde.KGlobalAccel.getGlobalShortcutsByKey 16777225 2>/dev/null | \
+      grep -Fq 'org.omarchy.capture.desktop' && break
     sleep 1
   done
+  # Remove the underscored component identity used by the first preview. The
+  # desktop service's canonical dotted id remains the only Print owner.
+  qdbus6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.unregister \
+    org_omarchy_capture_desktop _launch >/dev/null 2>&1 || true
   # Force Spectacle's active shortcut to Meta+Shift+S only. The config write
   # above preserves its default metadata; this D-Bus call resolves the live
   # ownership conflict without waiting for another login.
