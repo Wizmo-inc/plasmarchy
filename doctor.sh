@@ -43,7 +43,7 @@ check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
 check_file "$HOME/.local/bin/plasmarchy-themes-handler"
 check_file "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml"
 
-if [[ $(kreadconfig6 --file kscreenlockerrc --group Greeter --key Theme 2>/dev/null) == org.omarchy.plasma.hybrid ]]; then
+if [[ $(kreadconfig6 --file plasmashellrc --group Shell --key ShellPackage 2>/dev/null) == org.omarchy.plasma.hybrid ]]; then
   printf '%s\n' 'ok   Omarchy Plasma idle lock screen is selected'
 else
   printf '%s\n' 'FAIL Omarchy Plasma idle lock screen is not selected'

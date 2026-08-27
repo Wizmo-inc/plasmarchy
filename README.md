@@ -26,7 +26,7 @@ files owned by the Omarchy package.
 - Optional minimal Omarchy SDDM login screen that selects Plasma
 - Timestamped backups, diagnostics, and rollback
 - Minimal login flow with Plasma's redundant startup splash disabled
-- Matching minimal Omarchy idle/unlock screen backed by KScreenLocker
+- Matching minimal Omarchy idle/unlock screen backed by KScreenLocker and the active Plasma Shell package
 - Print Screen routed through the Omarchy release-to-capture, save, clipboard, notification, and editor flow
 - Screenshots and images open in movable, minimizable Gwenview windows
 - Omarchy notification popups enabled for screenshot and system feedback

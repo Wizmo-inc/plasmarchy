@@ -81,6 +81,7 @@ backup "$HOME/.config/quickshell/plasma-omarchy"
 backup "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
 backup "$HOME/.config/ksplashrc"
 backup "$HOME/.config/kscreenlockerrc"
+backup "$HOME/.config/plasmashellrc"
 backup "$HOME/.config/kglobalshortcutsrc"
 backup "$HOME/.config/mimeapps.list"
 backup "$HOME/.config/kwinrc"
@@ -215,6 +216,10 @@ for asset in logo.png lock.png lock-failed.png entry.png entry-failed.png bullet
     "$plasma_shell_target/contents/lockscreen/assets/$asset"
 done
 kwriteconfig6 --file kscreenlockerrc --group Greeter --key Theme --notify org.omarchy.plasma.hybrid
+# Plasma 6 selects the lock screen from the active Plasma Shell package.
+# Keep the legacy Theme key above for older releases, and select the derived
+# package through the current ShellPackage key for Plasma 6.
+kwriteconfig6 --file plasmashellrc --group Shell --key ShellPackage org.omarchy.plasma.hybrid
 
 # Replace Spectacle's Print shortcut with the Omarchy workflow. Spectacle stays
 # available on Meta+Shift+S and remains the KWin-compatible capture backend.
