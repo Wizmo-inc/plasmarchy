@@ -225,7 +225,10 @@ printf 'installed_at=%q\nbackup_dir=%q\n' "$stamp" "$backup_dir" > "$state_dir/i
 "$repo_dir/doctor.sh" || true
 
 if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]]; then
-  pkill -f "$HOME/.config/quickshell/plasma-omarchy/shell.qml" 2>/dev/null || true
+  # The qs process command contains the configuration directory, not the
+  # shell.qml filename. Ask Quickshell to stop the exact instance so updates
+  # cannot leave an old plugin component running behind the new files.
+  qs kill --any-display --path "$HOME/.config/quickshell/plasma-omarchy" >/dev/null 2>&1 || true
   env OMARCHY_PATH="$omarchy_root" qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"
 fi
 
