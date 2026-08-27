@@ -25,6 +25,9 @@ files owned by the Omarchy package.
 - Print Screen routed through the Omarchy release-to-capture, save, clipboard, notification, and editor flow
 - Omarchy notification popups enabled for screenshot and system feedback
 
+Unlike Omarchy's upstream top-bar layout, Plasmarchy intentionally installs
+its primary bar at the bottom by default.
+
 ## Requirements
 
 - A current Omarchy installation

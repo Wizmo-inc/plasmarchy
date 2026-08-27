@@ -79,6 +79,13 @@ if command -v jq >/dev/null 2>&1 && ! jq -e . "$HOME/.config/omarchy/plasma-shel
   failures=$((failures + 1))
 fi
 
+if [[ $(jq -r '.bar.position // empty' "$HOME/.config/omarchy/plasma-shell.json" 2>/dev/null) == bottom ]]; then
+  printf '%s\n' 'ok   Plasmarchy bar is positioned at the bottom'
+else
+  printf '%s\n' 'FAIL Plasmarchy bar is not positioned at the bottom'
+  failures=$((failures + 1))
+fi
+
 if jq -e '.bar.layout.left[] | select(.id == "plasma.tasks") | .launchers | length > 0' \
   "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1; then
   printf '%s\n' 'ok   quick launchers are configured before window tasks'

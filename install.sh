@@ -57,6 +57,10 @@ done
   printf 'The installed Omarchy version does not provide the Agents plugin.\n' >&2
   exit 1
 }
+jq -e '.bar.position == "bottom"' "$repo_dir/user/plasma-shell.json" >/dev/null || {
+  printf '%s\n' 'Plasmarchy package error: the default bar position must be bottom.' >&2
+  exit 1
+}
 
 mkdir -p "$backup_dir" "$state_dir"
 
