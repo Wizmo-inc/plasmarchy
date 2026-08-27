@@ -14,7 +14,7 @@ backup_dir=$state_dir/latest-backup
   exit 1
 }
 
-pkill -f "$HOME/.config/quickshell/plasma-omarchy/shell.qml" 2>/dev/null || true
+qs kill --any-display --path "$HOME/.config/quickshell/plasma-omarchy" >/dev/null 2>&1 || true
 
 restore_or_remove() {
   local target=$1 saved=$backup_dir/${1#/}
@@ -36,7 +36,7 @@ restore_or_remove "$HOME/.local/bin/omarchy-shell"
 restore_or_remove "$HOME/.local/bin/omarchy-capture-screenshot"
 restore_or_remove "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 restore_or_remove "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.agents omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents omatask; do
   restore_or_remove "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 restore_or_remove "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"

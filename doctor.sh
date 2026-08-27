@@ -27,6 +27,7 @@ check_file /usr/share/omarchy/shell/shell.qml
 check_file "$HOME/.config/omarchy/plasma-shell.json"
 check_file "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
+check_file "$HOME/.config/omarchy/plugins/plasma.show-desktop/ShowDesktop.qml"
 if [[ -f $HOME/.config/omarchy/plugins/plasma.agents/Panel.qml ]] ||
    compgen -G "$HOME/.config/omarchy/plugins/*.agents/Panel.qml" >/dev/null; then
   printf '%s\n' 'ok   Agents plugin'
@@ -91,6 +92,13 @@ if jq -e '.bar.layout.left[] | select(.id == "plasma.tasks") | .launchers | leng
   printf '%s\n' 'ok   quick launchers are configured before window tasks'
 else
   printf '%s\n' 'FAIL quick launchers are missing from plasma.tasks'
+  failures=$((failures + 1))
+fi
+
+if [[ $(jq -r '.bar.layout.right[-1].id // empty' "$HOME/.config/omarchy/plasma-shell.json" 2>/dev/null) == plasma.show-desktop ]]; then
+  printf '%s\n' 'ok   Show Desktop is the final right-side bar action'
+else
+  printf '%s\n' 'FAIL Show Desktop is not the final right-side bar action'
   failures=$((failures + 1))
 fi
 

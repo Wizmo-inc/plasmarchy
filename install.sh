@@ -84,7 +84,7 @@ backup "$HOME/.local/bin/omarchy-capture-screenshot"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.agents omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents omatask; do
   backup "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 
@@ -98,7 +98,7 @@ mkdir -p \
   "$HOME/.local/share/plasma/shells"
 
 install -m 0644 "$repo_dir/user/plasma-shell.json" "$HOME/.config/omarchy/plasma-shell.json"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop omatask; do
   rm -rf -- "$HOME/.config/omarchy/plugins/$plugin_id"
   cp -a -- "$repo_dir/user/plugins/$plugin_id" "$HOME/.config/omarchy/plugins/$plugin_id"
 done

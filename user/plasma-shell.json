@@ -87,6 +87,9 @@
         },
         {
           "id": "omarchy.power"
+        },
+        {
+          "id": "plasma.show-desktop"
         }
       ]
     }

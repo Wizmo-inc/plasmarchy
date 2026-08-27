@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "plasma.show-desktop",
+  "name": "Plasma Show Desktop",
+  "version": "1.0.0",
+  "author": "Wizmo-inc contributors",
+  "license": "MIT",
+  "description": "Toggles KWin's native Show Desktop state from the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "ShowDesktop.qml"
+  },
+  "barWidget": {
+    "displayName": "Show Desktop",
+    "description": "Hides all windows to reveal the desktop and restores them on a second click.",
+    "category": "Compositor",
+    "allowMultiple": false
+  }
+}
