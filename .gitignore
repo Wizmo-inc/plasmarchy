@@ -3,3 +3,6 @@
 *.swp
 *.bak
 dist/
+
+# Private local design history and maintenance notes.
+PROJECT_CONTEXT.md

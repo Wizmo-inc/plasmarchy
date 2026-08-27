@@ -32,7 +32,7 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "󰍹"
+    text: ""
     fontSize: 16
     horizontalMargin: 8
     active: root.showingDesktop

@@ -14,7 +14,9 @@ files owned by the Omarchy package.
 - Theme-aware quick launchers for Files, Terminal, and Chrome before open windows
 - Right-click app actions to pin or unpin Quick Launch icons and add desktop shortcuts
 - KWin-aware window task buttons with click-to-minimize behavior
+- Right-click Close menu for every running application or folder task
 - Show Desktop minimize/restore toggle that keeps the bottom bar visible
+- Distinct window-minimize glyph for Show Desktop instead of a display icon
 - Plasma virtual desktop switcher and KRunner shortcut
 - Omarchy application and agent menus
 - Omarchy Agents usage panel and the `omatask` system monitor
@@ -25,6 +27,7 @@ files owned by the Omarchy package.
 - Minimal login flow with Plasma's redundant startup splash disabled
 - Matching minimal Omarchy idle/unlock screen backed by KScreenLocker
 - Print Screen routed through the Omarchy release-to-capture, save, clipboard, notification, and editor flow
+- Screenshots and images open in movable, minimizable Gwenview windows
 - Omarchy notification popups enabled for screenshot and system feedback
 
 Unlike Omarchy's upstream top-bar layout, Plasmarchy intentionally installs
@@ -34,7 +37,7 @@ its primary bar at the bottom by default.
 
 - A current Omarchy installation
 - KDE Plasma 6 and KWin
-- Dolphin (the default pinned file manager)
+- Dolphin (the default pinned file manager) and Gwenview (the Plasma-native image viewer)
 - Quickshell (`qs`), `qdbus6`, `jq`, `perl`, and `patch`
 - `plasma-apply-colorscheme`
 - Spectacle and `wl-copy` (used as the KWin-compatible screenshot backend)

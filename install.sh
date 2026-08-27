@@ -38,14 +38,14 @@ if $install_deps; then
     printf '%s\n' '--install-deps currently supports Arch Linux only.' >&2
     exit 1
   }
-  sudo pacman -S --needed plasma-meta dolphin qt6-tools patch python spectacle wl-clipboard
+  sudo pacman -S --needed plasma-meta dolphin gwenview qt6-tools patch python spectacle wl-clipboard
 fi
 
 require() {
   command -v "$1" >/dev/null 2>&1 || { printf 'Missing dependency: %s\n' "$1" >&2; exit 1; }
 }
 
-for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasma-apply-colorscheme dolphin omarchy-launch-terminal omarchy-launch-browser; do
+for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasma-apply-colorscheme dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
   require "$command_name"
 done
 
@@ -82,6 +82,7 @@ backup "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
 backup "$HOME/.config/ksplashrc"
 backup "$HOME/.config/kscreenlockerrc"
 backup "$HOME/.config/kglobalshortcutsrc"
+backup "$HOME/.config/mimeapps.list"
 backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
@@ -139,6 +140,15 @@ install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/plasmarchy-quicklaunch" "$HOME/.local/bin/plasmarchy-quicklaunch"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
+
+# Omarchy defaults to imv, whose intentionally minimal tiling-WM surface has
+# no visible window controls in Plasma. Use KDE's native viewer so images have
+# normal move, minimize, maximize, and close behavior.
+for image_mime in image/png image/jpeg image/gif image/bmp image/webp image/tiff image/svg+xml image/x-xcf image/x-portable-pixmap image/x-xbitmap; do
+  kwriteconfig6 --file mimeapps.list --group 'Default Applications' \
+    --key "$image_mime" org.kde.gwenview.desktop
+done
+kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 
 rm -rf -- "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 cp -a -- "$repo_dir/user/kwin/scripts/plasmarchy-show-desktop" \

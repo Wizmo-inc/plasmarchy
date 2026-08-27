@@ -20,7 +20,7 @@ check_file() {
   fi
 }
 
-for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasmashell dolphin omarchy-launch-terminal omarchy-launch-browser; do
+for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasmashell dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
   check_command "$command_name"
 done
 check_file /usr/share/omarchy/shell/shell.qml
@@ -104,6 +104,14 @@ if jq -e '.plugins[] | select(.id == "plasma.menu")' \
   printf '%s\n' 'ok   graphical app actions are installed'
 else
   printf '%s\n' 'FAIL graphical app actions are missing'
+  failures=$((failures + 1))
+fi
+
+if [[ $(xdg-mime query default image/png 2>/dev/null) == org.kde.gwenview.desktop ]] &&
+   [[ $(xdg-mime query default image/jpeg 2>/dev/null) == org.kde.gwenview.desktop ]]; then
+  printf '%s\n' 'ok   images open in Plasma-native Gwenview windows'
+else
+  printf '%s\n' 'FAIL image files are not associated with Gwenview'
   failures=$((failures + 1))
 fi
 

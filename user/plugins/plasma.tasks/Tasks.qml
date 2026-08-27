@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import QtQuick.Controls as QQC
 import org.kde.kirigami as Kirigami
 import qs.Commons
 import qs.Ui
@@ -16,6 +17,7 @@ BarWidget {
   ])
   property var tasks: []
   property string lastActivatedId: ""
+  property var contextTask: null
 
   function refresh() {
     if (!taskQuery.running) taskQuery.running = true
@@ -67,6 +69,16 @@ BarWidget {
     refreshDelay.restart()
   }
 
+  function requestCloseTask(task) {
+    if (!task) return
+    contextTask = task
+    Quickshell.execDetached([
+      "qdbus6", "org.kde.KWin", "/WindowsRunner",
+      "org.kde.krunner1.Run", task.id, ""
+    ])
+    closeDelay.restart()
+  }
+
   Process {
     id: taskQuery
     command: [Quickshell.env("HOME") + "/.config/omarchy/plugins/plasma.tasks/tasks.sh"]
@@ -89,6 +101,54 @@ BarWidget {
     interval: 250
     repeat: false
     onTriggered: root.refresh()
+  }
+
+  Timer {
+    id: closeDelay
+    interval: 180
+    repeat: false
+    onTriggered: {
+      Quickshell.execDetached([
+        "qdbus6", "org.kde.kglobalaccel", "/component/kwin",
+        "org.kde.kglobalaccel.Component.invokeShortcut", "Window Close"
+      ])
+      root.lastActivatedId = ""
+      refreshDelay.restart()
+    }
+  }
+
+  QQC.Menu {
+    id: taskMenu
+    width: Style.space(180)
+    modal: true
+    closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutside
+    padding: Style.space(5)
+
+    background: Rectangle {
+      color: Color.menu.background
+      radius: Style.cornerRadius
+      border.width: 1
+      border.color: Color.menu.border
+    }
+
+    QQC.MenuItem {
+      id: closeAction
+      text: "Close " + ((root.contextTask && root.contextTask.title) || "window")
+      height: Style.space(38)
+      onTriggered: root.requestCloseTask(root.contextTask)
+      contentItem: Text {
+        text: closeAction.text
+        color: closeAction.highlighted ? Color.menu.selectedText : Color.menu.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.body
+        elide: Text.ElideRight
+        verticalAlignment: Text.AlignVCenter
+      }
+      background: Rectangle {
+        color: closeAction.highlighted ? Color.menu.selectedBackground : "transparent"
+        radius: Style.cornerRadius
+      }
+    }
   }
 
   visible: !vertical && (launchers.length > 0 || tasks.length > 0)
@@ -213,7 +273,15 @@ BarWidget {
           cursorShape: Qt.PointingHandCursor
 
           onClicked: function(event) {
-            root.activateTask(task.modelData)
+            if (event.button === Qt.RightButton) {
+              if (root.bar) root.bar.hideTooltip(task)
+              root.contextTask = task.modelData
+              taskMenu.popup()
+            } else if (event.button === Qt.MiddleButton) {
+              root.requestCloseTask(task.modelData)
+            } else {
+              root.activateTask(task.modelData)
+            }
           }
 
           onEntered: if (root.bar)
