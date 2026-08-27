@@ -119,9 +119,12 @@ BarWidget {
 
   QQC.Menu {
     id: taskMenu
-    width: Style.space(180)
-    modal: true
-    closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutside
+    width: Style.space(120)
+    popupType: QQC.Popup.Window
+    modal: false
+    closePolicy: QQC.Popup.CloseOnEscape
+               | QQC.Popup.CloseOnPressOutside
+               | QQC.Popup.CloseOnReleaseOutside
     padding: Style.space(5)
 
     background: Rectangle {
@@ -133,7 +136,7 @@ BarWidget {
 
     QQC.MenuItem {
       id: closeAction
-      text: "Close " + ((root.contextTask && root.contextTask.title) || "window")
+      text: "Close window"
       height: Style.space(38)
       onTriggered: root.requestCloseTask(root.contextTask)
       contentItem: Text {
@@ -141,7 +144,7 @@ BarWidget {
         color: closeAction.highlighted ? Color.menu.selectedText : Color.menu.text
         font.family: Style.font.family
         font.pixelSize: Style.font.body
-        elide: Text.ElideRight
+        horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
       }
       background: Rectangle {
