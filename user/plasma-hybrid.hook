@@ -7,6 +7,7 @@ theme_root="$HOME/.local/state/omarchy/current/theme"
 colors_file="$theme_root/colors.toml"
 scheme_dir="$HOME/.local/share/color-schemes"
 scheme_file="$scheme_dir/Omarchy.colors"
+icons_file="$theme_root/icons.theme"
 
 [[ -f $colors_file ]] || exit 0
 
@@ -86,6 +87,36 @@ mv "$scheme_tmp" "$scheme_file"
 
 plasma-apply-colorscheme Omarchy >/dev/null 2>&1 || true
 
+# Omarchy applies icons through GNOME settings, while Plasma reads the KDE
+# [Icons] group. Keep both desktops on the icon family selected by the theme.
+icon_theme="Yaru-blue"
+if [[ -f $icons_file ]]; then
+  icon_theme=$(tr -d '[:space:]' < "$icons_file")
+fi
+
+icon_theme_exists() {
+  local root
+  for root in "$HOME/.local/share/icons" "$HOME/.icons" /usr/local/share/icons /usr/share/icons; do
+    [[ -f $root/$1/index.theme ]] && return 0
+  done
+  return 1
+}
+
+if ! icon_theme_exists "$icon_theme"; then
+  # Current Omarchy White/Vantablack metadata uses gray/grey names that the
+  # Arch Yaru package does not ship. Preserve light/dark intent in that case.
+  mode=$(omarchy-theme-color --file "$colors_file" mode 2>/dev/null || true)
+  if [[ $mode == "light" ]] && icon_theme_exists Yaru; then
+    icon_theme="Yaru"
+  elif icon_theme_exists Yaru-dark; then
+    icon_theme="Yaru-dark"
+  else
+    icon_theme="breeze-dark"
+  fi
+fi
+
+kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "$icon_theme"
+
 current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null || true)
 if [[ -f $current_background ]]; then
   wallpaper_uri=$(jq -Rn --arg value "file://$current_background" '$value')
@@ -93,3 +124,8 @@ if [[ -f $current_background ]]; then
     "var ds = desktops(); for (var i = 0; i < ds.length; ++i) { ds[i].wallpaperPlugin = 'org.kde.image'; ds[i].currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General']; ds[i].writeConfig('Image', $wallpaper_uri); }" \
     >/dev/null 2>&1 || true
 fi
+
+# Folder View caches icons inside plasmashell. Refreshing the current shell is
+# enough to repaint desktop folders without restarting the whole Plasma session.
+qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.refreshCurrentShell \
+  >/dev/null 2>&1 || true

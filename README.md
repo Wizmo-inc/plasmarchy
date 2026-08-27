@@ -15,7 +15,7 @@ files owned by the Omarchy package.
 - Plasma virtual desktop switcher and KRunner shortcut
 - Omarchy application and agent menus
 - Omarchy Agents usage panel and the `omatask` system monitor
-- Omarchy palette and wallpaper synchronization into Plasma
+- Omarchy palette, icon theme, and wallpaper synchronization into Plasma
 - Separate Plasma shell configuration, leaving Hyprland untouched
 - Optional minimal Omarchy SDDM login screen that selects Plasma
 - Timestamped backups, diagnostics, and rollback
