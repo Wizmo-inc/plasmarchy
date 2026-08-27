@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Omarchy Screenshot
+Comment=Omarchy screenshot flow for Plasma
+Exec=omarchy-capture-screenshot
+Icon=camera-photo
+NoDisplay=true
+X-KDE-Shortcuts=Print

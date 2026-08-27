@@ -20,14 +20,41 @@ check_file() {
   fi
 }
 
-for command_name in omarchy qs qdbus6 jq perl python kwriteconfig6 kreadconfig6 plasmashell; do
+for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasmashell; do
   check_command "$command_name"
 done
 check_file /usr/share/omarchy/shell/shell.qml
 check_file "$HOME/.config/omarchy/plasma-shell.json"
 check_file "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
-check_file "$HOME/.config/omarchy/plugins/plasma.agents/Panel.qml"
+if [[ -f $HOME/.config/omarchy/plugins/plasma.agents/Panel.qml ]] ||
+   compgen -G "$HOME/.config/omarchy/plugins/*.agents/Panel.qml" >/dev/null; then
+  printf '%s\n' 'ok   Agents plugin'
+else
+  printf '%s\n' 'FAIL Agents plugin'
+  failures=$((failures + 1))
+fi
+check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml"
+check_file "$HOME/.local/bin/omarchy-capture-screenshot"
+
+if [[ $(kreadconfig6 --file kscreenlockerrc --group Greeter --key Theme 2>/dev/null) == org.omarchy.plasma.hybrid ]]; then
+  printf '%s\n' 'ok   Omarchy Plasma idle lock screen is selected'
+else
+  printf '%s\n' 'FAIL Omarchy Plasma idle lock screen is not selected'
+  failures=$((failures + 1))
+fi
+
+if [[ $(kreadconfig6 --file kglobalshortcutsrc --group org_omarchy_capture_desktop --key _launch 2>/dev/null) == Print,* ]]; then
+  printf '%s\n' 'ok   Print opens the Omarchy screenshot flow'
+else
+  printf '%s\n' 'FAIL Omarchy Print shortcut is not configured'
+  failures=$((failures + 1))
+fi
+
+if rg -q 'refreshCurrentShell' "$HOME/.config/omarchy/hooks/theme-set.d" 2>/dev/null; then
+  printf '%s\n' 'FAIL a theme hook still calls destructive refreshCurrentShell'
+  failures=$((failures + 1))
+fi
 
 if [[ $(kreadconfig6 --file ksplashrc --group KSplash --key Theme 2>/dev/null) == None ]] &&
    [[ $(kreadconfig6 --file ksplashrc --group KSplash --key Engine 2>/dev/null) == none ]]; then

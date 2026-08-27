@@ -38,14 +38,14 @@ if $install_deps; then
     printf '%s\n' '--install-deps currently supports Arch Linux only.' >&2
     exit 1
   }
-  sudo pacman -S --needed plasma-meta qt6-tools patch python
+  sudo pacman -S --needed plasma-meta qt6-tools patch python spectacle wl-clipboard
 fi
 
 require() {
   command -v "$1" >/dev/null 2>&1 || { printf 'Missing dependency: %s\n' "$1" >&2; exit 1; }
 }
 
-for command_name in qs qdbus6 jq perl patch python kwriteconfig6 kreadconfig6 plasma-apply-colorscheme; do
+for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasma-apply-colorscheme; do
   require "$command_name"
 done
 
@@ -72,8 +72,13 @@ backup "$HOME/.config/omarchy/plasma-shell.json"
 backup "$HOME/.config/quickshell/plasma-omarchy"
 backup "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
 backup "$HOME/.config/ksplashrc"
+backup "$HOME/.config/kscreenlockerrc"
+backup "$HOME/.config/kglobalshortcutsrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
+backup "$HOME/.local/bin/omarchy-capture-screenshot"
+backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
+backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.agents omatask; do
   backup "$HOME/.config/omarchy/plugins/$plugin_id"
@@ -84,7 +89,9 @@ mkdir -p \
   "$HOME/.config/omarchy/hooks/theme-set.d" \
   "$HOME/.config/quickshell/plasma-omarchy" \
   "$HOME/.config/autostart" \
-  "$HOME/.local/bin"
+  "$HOME/.local/bin" \
+  "$HOME/.local/share/applications" \
+  "$HOME/.local/share/plasma/shells"
 
 install -m 0644 "$repo_dir/user/plasma-shell.json" "$HOME/.config/omarchy/plasma-shell.json"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces omatask; do
@@ -110,7 +117,57 @@ for item in Commons Ui plugins services; do
 done
 
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
+install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
+
+# KScreenLocker loads its UI from a Plasma Shell package. Derive a complete,
+# version-matched package locally, replacing only the lock frontend.
+plasma_shell_source=/usr/share/plasma/shells/org.kde.plasma.desktop
+plasma_shell_target=$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid
+omarchy_sddm_assets=/usr/share/sddm/themes/omarchy
+[[ -f $plasma_shell_source/contents/lockscreen/LockScreenUi.qml ]] || {
+  printf '%s\n' 'The installed Plasma shell does not provide its expected lock screen.' >&2
+  exit 1
+}
+[[ -f $omarchy_sddm_assets/logo.png ]] || {
+  printf '%s\n' 'The installed Omarchy login assets were not found.' >&2
+  exit 1
+}
+rm -rf -- "$plasma_shell_target"
+cp -a -- "$plasma_shell_source" "$plasma_shell_target"
+perl -pi -e 's/"Id": "org\.kde\.plasma\.desktop"/"Id": "org.omarchy.plasma.hybrid"/' \
+  "$plasma_shell_target/metadata.json"
+install -m 0644 "$repo_dir/user/lockscreen/LockScreenUi.qml" \
+  "$plasma_shell_target/contents/lockscreen/LockScreenUi.qml"
+mkdir -p "$plasma_shell_target/contents/lockscreen/assets"
+for asset in logo.png lock.png lock-failed.png entry.png entry-failed.png bullet.png; do
+  install -m 0644 "$omarchy_sddm_assets/$asset" \
+    "$plasma_shell_target/contents/lockscreen/assets/$asset"
+done
+kwriteconfig6 --file kscreenlockerrc --group Greeter --key Theme --notify org.omarchy.plasma.hybrid
+
+# Replace Spectacle's Print shortcut with the Omarchy workflow. Spectacle stays
+# available on Meta+Shift+S and remains the KWin-compatible capture backend.
+capture_desktop=$HOME/.local/share/applications/org.omarchy.capture.desktop
+install -m 0644 "$repo_dir/user/org.omarchy.capture.desktop" "$capture_desktop"
+kwriteconfig6 --file kglobalshortcutsrc --group org_kde_spectacle_desktop --key _launch \
+  $'Meta+Shift+S,Print\tMeta+Shift+S,Launch Spectacle'
+kwriteconfig6 --file kglobalshortcutsrc --group org_omarchy_capture_desktop --key _launch \
+  'Print,Print,Omarchy Screenshot'
+kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+if systemctl --user is-active plasma-kglobalaccel.service >/dev/null 2>&1; then
+  systemctl --user restart plasma-kglobalaccel.service
+  for attempt in 1 2 3 4 5; do
+    qdbus6 org.kde.kglobalaccel /component/org_omarchy_capture_desktop >/dev/null 2>&1 && break
+    sleep 1
+  done
+  # Force Spectacle's active shortcut to Meta+Shift+S only. The config write
+  # above preserves its default metadata; this D-Bus call resolves the live
+  # ownership conflict without waiting for another login.
+  busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel setShortcut \
+    asaiu 4 org.kde.spectacle.desktop _launch Spectacle 'Launch Spectacle' \
+    1 301989971 4 >/dev/null
+fi
 
 # Keep SDDM's minimal login, but skip Plasma's second branded startup screen.
 kwriteconfig6 --file ksplashrc --group KSplash --key Theme --notify None
@@ -168,5 +225,5 @@ if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]]; then
   env OMARCHY_PATH="$omarchy_root" qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"
 fi
 
-printf '\nInstalled Omarchy Plasma Hybrid. Log out and choose Plasma if this is a new Plasma installation.\n'
+printf '\nInstalled Plasmarchy. Log out and choose Plasma if this is a new Plasma installation.\n'
 printf 'Backup: %s\n' "$backup_dir"

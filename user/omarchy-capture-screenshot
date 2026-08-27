@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Keep the packaged Omarchy flow in Hyprland. KWin deliberately does not expose
+# the wlroots screenshot protocol used by grim, so use Spectacle only as the
+# capture backend in Plasma and retain Omarchy's save/copy/editor workflow.
+if [[ ${XDG_CURRENT_DESKTOP:-} != *KDE* ]]; then
+  exec /usr/bin/omarchy-capture-screenshot "$@"
+fi
+
+[[ -f $HOME/.config/user-dirs.dirs ]] && source "$HOME/.config/user-dirs.dirs"
+output_dir=${OMARCHY_SCREENSHOT_DIR:-${XDG_PICTURES_DIR:-$HOME/Pictures}}
+editor=${OMARCHY_SCREENSHOT_EDITOR:-tensaku-edit}
+mode=${1:-smart}
+processing=${2:-slurp}
+
+for argument in "$@"; do
+  [[ $argument == --editor=* ]] && editor=${argument#--editor=}
+done
+
+mkdir -p "$output_dir"
+filename="screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png"
+filepath=$output_dir/$filename
+
+case "$mode" in
+  smart|region) capture_mode=(--region) ;;
+  windows) capture_mode=(--windowundercursor) ;;
+  fullscreen) capture_mode=(--fullscreen) ;;
+  *) printf 'Unknown screenshot mode: %s\n' "$mode" >&2; exit 2 ;;
+esac
+
+# Background mode still presents KWin's native interactive selector for region
+# captures, but skips Spectacle's editor and notification afterward.
+spectacle "${capture_mode[@]}" --background --nonotify --output "$filepath"
+[[ -s $filepath ]] || exit 0
+
+case "$processing" in
+  slurp)
+    wl-copy --type image/png < "$filepath"
+    printf '%s\n' "$filepath"
+    omarchy-notification-send \
+      "Screenshot saved to clipboard and file" \
+      "Edit with Super + Alt + , (or click this)" \
+      --image "$filepath" --exec "$editor" "$filepath" || true
+    ;;
+  copy)
+    wl-copy --type image/png < "$filepath"
+    ;;
+  save)
+    printf '%s\n' "$filepath"
+    ;;
+  *) printf 'Unknown screenshot processing mode: %s\n' "$processing" >&2; exit 2 ;;
+esac

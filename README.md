@@ -1,4 +1,4 @@
-# Omarchy Plasma Hybrid
+# Plasmarchy
 
 The Omarchy shell and theme experience on top of KDE Plasma's fluid window
 management. It keeps the distinctive Omarchy bar, menus, indicators, Agents,
@@ -20,6 +20,8 @@ files owned by the Omarchy package.
 - Optional minimal Omarchy SDDM login screen that selects Plasma
 - Timestamped backups, diagnostics, and rollback
 - Minimal login flow with Plasma's redundant startup splash disabled
+- Matching minimal Omarchy idle/unlock screen backed by KScreenLocker
+- Print Screen routed through the Omarchy save, clipboard, notification, and editor flow
 
 ## Requirements
 
@@ -27,6 +29,7 @@ files owned by the Omarchy package.
 - KDE Plasma 6 and KWin
 - Quickshell (`qs`), `qdbus6`, `jq`, `perl`, and `patch`
 - `plasma-apply-colorscheme`
+- Spectacle and `wl-copy` (used as the KWin-compatible screenshot backend)
 
 The first tested combination is Omarchy `4.0.0.r1836.g0ae1694-1`, Plasma
 `6.7.4`, and Quickshell `0.3.1`. Omarchy development snapshots may change the
@@ -38,8 +41,8 @@ On a fresh Omarchy installation, clone the project and let it install Plasma
 and the required Arch packages:
 
 ```bash
-git clone https://github.com/Wizmo-inc/omarchy-plasma-hybrid.git
-cd omarchy-plasma-hybrid
+git clone https://github.com/Wizmo-inc/plasmarchy.git
+cd plasmarchy
 ./install.sh --install-deps --replace-panel
 ```
 

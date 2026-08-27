@@ -29,12 +29,19 @@ restore_or_remove "$HOME/.config/omarchy/plasma-shell.json"
 restore_or_remove "$HOME/.config/quickshell/plasma-omarchy"
 restore_or_remove "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
 restore_or_remove "$HOME/.config/ksplashrc"
+restore_or_remove "$HOME/.config/kscreenlockerrc"
+restore_or_remove "$HOME/.config/kglobalshortcutsrc"
 restore_or_remove "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 restore_or_remove "$HOME/.local/bin/omarchy-shell"
+restore_or_remove "$HOME/.local/bin/omarchy-capture-screenshot"
+restore_or_remove "$HOME/.local/share/applications/org.omarchy.capture.desktop"
+restore_or_remove "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.agents omatask; do
   restore_or_remove "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 restore_or_remove "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+systemctl --user try-restart plasma-kglobalaccel.service >/dev/null 2>&1 || true
 
 if [[ -f $state_dir/system-install.env ]] && grep -qx 'with_sddm=true' "$state_dir/system-install.env"; then
   sudo rm -rf -- /usr/local/share/sddm/themes/omarchy-plasma
@@ -50,4 +57,4 @@ if [[ -f $state_dir/system-install.env ]] && grep -qx 'with_sddm=true' "$state_d
   fi
 fi
 
-printf '%s\n' 'Omarchy Plasma Hybrid removed. Log out and back in to finish restoring the desktop.'
+printf '%s\n' 'Plasmarchy removed. Log out and back in to finish restoring the desktop.'
