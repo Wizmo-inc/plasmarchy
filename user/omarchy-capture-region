@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Preserve Omarchy's drag-to-select experience under KWin. slurp speaks the
+# layer-shell protocol that Plasma supports, while the packaged helper's
+# rectangle discovery and frozen-screen helpers are Hyprland-specific.
+
+if [[ ${XDG_CURRENT_DESKTOP:-} != *KDE* && ${XDG_SESSION_DESKTOP:-} != *KDE* ]]; then
+  exec /usr/bin/omarchy-capture-region "$@"
+fi
+
+mode=smart
+for arg in "$@"; do
+  case "$arg" in
+    region|windows|smart|fullscreen) mode=$arg ;;
+  esac
+done
+
+if [[ $mode == fullscreen ]]; then
+  output_name=$(qdbus6 org.kde.KWin /KWin org.kde.KWin.activeOutputName 2>/dev/null)
+  kscreen-doctor -j 2>/dev/null | jq -r --arg output "$output_name" '
+    .outputs[]
+    | select(.enabled == true and .name == $output)
+    | "\(.pos.x),\(.pos.y) \(.size.width)x\(.size.height)"
+  '
+  exit
+fi
+
+# The normal Omarchy recorder asks for smart selection with --match-monitor.
+# Always return geometry here: that keeps it on gpu-screen-recorder's region
+# path and avoids its Hyprland-only focused-monitor resolution lookup.
+selection=$(slurp 2>/dev/null) || exit 1
+[[ -n $selection ]] || exit 1
+printf '%s\n' "$selection"

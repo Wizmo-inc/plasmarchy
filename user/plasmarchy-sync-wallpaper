@@ -1,0 +1,27 @@
+#!/bin/bash
+
+background=${1:-$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null)}
+[[ -f $background ]] || exit 0
+
+background=$(realpath -- "$background")
+wallpaper_uri=$(jq -Rn --arg value "file://$background" '$value')
+
+# Update the running desktop immediately.
+qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
+  "var ds = desktops(); for (var i = 0; i < ds.length; ++i) { ds[i].wallpaperPlugin = 'org.kde.image'; ds[i].currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General']; ds[i].writeConfig('Image', $wallpaper_uri); }" \
+  >/dev/null 2>&1 || true
+
+# Plasma keeps the scripting change in memory but does not reliably flush it
+# before a reboot. Persist every desktop containment as well, so the next login
+# cannot restore the previous KDE wallpaper.
+layout_file="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+while IFS= read -r containment_id; do
+  [[ -n $containment_id ]] || continue
+  wallpaper_plugin=$(kreadconfig6 --file plasma-org.kde.plasma.desktop-appletsrc \
+    --group Containments --group "$containment_id" --key wallpaperplugin 2>/dev/null)
+  [[ -n $wallpaper_plugin ]] || continue
+  kwriteconfig6 --file plasma-org.kde.plasma.desktop-appletsrc \
+    --group Containments --group "$containment_id" \
+    --group Wallpaper --group org.kde.image --group General \
+    --key Image "file://$background"
+done < <(sed -n 's/^\[Containments\]\[\([0-9][0-9]*\)\]$/\1/p' "$layout_file" 2>/dev/null)

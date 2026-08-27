@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Omarchy's recorder discovers monitors and regions through Hyprland. In a
+# Plasma session its user-owned capture-region helper provides the same direct
+# drag selection through slurp, while gpu-screen-recorder remains the backend.
+
+if [[ ${XDG_CURRENT_DESKTOP:-} != *KDE* && ${XDG_SESSION_DESKTOP:-} != *KDE* ]]; then
+  exec /usr/bin/omarchy-capture-screenrecording "$@"
+fi
+
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    --fullscreen)
+      # The packaged fullscreen branch asks hyprctl for a monitor. Fall back to
+      # the familiar selector in Plasma instead of opening KDE's share dialog.
+      ;;
+    *) args+=("$arg") ;;
+  esac
+done
+
+exec /usr/bin/omarchy-capture-screenrecording "${args[@]}"

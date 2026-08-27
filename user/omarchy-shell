@@ -12,6 +12,7 @@ fi
 hybrid_path="$HOME/.config/quickshell/plasma-omarchy"
 
 if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]] && qs list --all 2>/dev/null | grep -Fq "$hybrid_path/shell.qml"; then
+  command_args=("$@")
   if [[ ${1:-} == shell && ( ${2:-} == summon || ${2:-} == toggle ) && $# == 3 ]]; then
     set -- "$1" "$2" "$3" "{}"
   fi
@@ -22,6 +23,9 @@ if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]] && qs list --all 2>/dev/null | grep -
     (( quiet )) && exit 0
     echo "Plasma Omarchy shell is not responding" >&2
     exit "$status"
+  fi
+  if [[ ${command_args[0]:-} == background && ${command_args[1]:-} == set ]]; then
+    "$HOME/.local/bin/plasmarchy-sync-wallpaper" "${command_args[2]:-}"
   fi
   (( quiet )) || [[ -z $output ]] || printf '%s\n' "$output"
   exit 0

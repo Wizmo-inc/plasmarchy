@@ -45,7 +45,7 @@ require() {
   command -v "$1" >/dev/null 2>&1 || { printf 'Missing dependency: %s\n' "$1" >&2; exit 1; }
 }
 
-for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasma-apply-colorscheme dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
+for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy slurp gpu-screen-recorder kscreen-doctor plasma-apply-colorscheme dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
   require "$command_name"
 done
 
@@ -88,6 +88,10 @@ backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
 backup "$HOME/.local/bin/omarchy-capture-screenshot"
+backup "$HOME/.local/bin/omarchy-capture-region"
+backup "$HOME/.local/bin/omarchy-capture-screenrecording"
+backup "$HOME/.local/bin/plasmarchy-session-start"
+backup "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 backup "$HOME/.local/bin/plasmarchy-quicklaunch"
 backup "$HOME/.local/bin/plasmarchy-themes-handler"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
@@ -143,6 +147,10 @@ done
 
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
+install -m 0755 "$repo_dir/user/omarchy-capture-region" "$HOME/.local/bin/omarchy-capture-region"
+install -m 0755 "$repo_dir/user/omarchy-capture-screenrecording" "$HOME/.local/bin/omarchy-capture-screenrecording"
+install -m 0755 "$repo_dir/user/plasmarchy-session-start" "$HOME/.local/bin/plasmarchy-session-start"
+install -m 0755 "$repo_dir/user/plasmarchy-sync-wallpaper" "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 install -m 0755 "$repo_dir/user/plasmarchy-quicklaunch" "$HOME/.local/bin/plasmarchy-quicklaunch"
 install -m 0755 "$repo_dir/user/plasmarchy-themes-handler" "$HOME/.local/bin/plasmarchy-themes-handler"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
@@ -257,8 +265,8 @@ desktop_file=$HOME/.config/autostart/plasma-omarchy-bar.desktop
   printf '%s\n' '[Desktop Entry]'
   printf '%s\n' 'Type=Application'
   printf '%s\n' 'Name=Omarchy Bar for Plasma'
-  printf '%s\n' 'Comment=Run the Omarchy-style Quickshell bar in KDE Plasma'
-  printf 'Exec=env OMARCHY_PATH=%s qs --no-duplicate --daemonize --path %s/.config/quickshell/plasma-omarchy\n' "$omarchy_root" "$HOME"
+  printf '%s\n' 'Comment=Sync the Omarchy theme and run its bar in KDE Plasma'
+  printf 'Exec=env OMARCHY_PATH=%s %s/.local/bin/plasmarchy-session-start\n' "$omarchy_root" "$HOME"
   printf '%s\n' 'OnlyShowIn=KDE;'
   printf '%s\n' 'X-KDE-autostart-after=panel'
   printf '%s\n' 'X-KDE-StartupNotify=false'

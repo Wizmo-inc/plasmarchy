@@ -30,6 +30,8 @@ files owned by the Omarchy package.
 - Print Screen routed through the Omarchy release-to-capture, save, clipboard, notification, and editor flow
 - Screenshots and images open in movable, minimizable Gwenview windows
 - Omarchy notification popups enabled for screenshot and system feedback
+- Omarchy-style drag-to-select screen recording from the Capture menu
+- Login-time and live background synchronization with the active Omarchy theme
 
 Unlike Omarchy's upstream top-bar layout, Plasmarchy intentionally installs
 its primary bar at the bottom by default.
@@ -42,6 +44,7 @@ its primary bar at the bottom by default.
 - Quickshell (`qs`), `qdbus6`, `jq`, `perl`, and `patch`
 - `plasma-apply-colorscheme`
 - Spectacle and `wl-copy` (used as the KWin-compatible screenshot backend)
+- `gpu-screen-recorder` and `slurp` for screen recording
 
 The first tested combination is Omarchy `4.0.0.r1836.g0ae1694-1`, Plasma
 `6.7.4`, and Quickshell `0.3.1`. Omarchy development snapshots may change the
@@ -107,6 +110,9 @@ Shared Omarchy shell directories are symlinked read-only. User-owned KWin
 widgets live in `~/.config/omarchy/plugins`, while a compatibility wrapper
 routes Omarchy IPC to the correct Quickshell instance in Plasma and falls back
 to the packaged command in Hyprland.
+At login, a small session launcher reapplies the current Omarchy palette and
+persisted wallpaper before starting the bar. Screen recording retains
+Omarchy's direct region selector while using gpu-screen-recorder under KWin.
 
 ## Contributing
 

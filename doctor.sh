@@ -20,7 +20,7 @@ check_file() {
   fi
 }
 
-for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy plasmashell dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
+for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy slurp gpu-screen-recorder kscreen-doctor plasmashell dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
   check_command "$command_name"
 done
 check_file /usr/share/omarchy/shell/shell.qml
@@ -39,9 +39,31 @@ else
 fi
 check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml"
 check_file "$HOME/.local/bin/omarchy-capture-screenshot"
+check_file "$HOME/.local/bin/omarchy-capture-region"
+check_file "$HOME/.local/bin/omarchy-capture-screenrecording"
+check_file "$HOME/.local/bin/plasmarchy-session-start"
+check_file "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
 check_file "$HOME/.local/bin/plasmarchy-themes-handler"
 check_file "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml"
+
+current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null)
+plasma_background=$(awk -F= '/^Image=file:\/\// {sub(/^Image=file:\/\//, ""); print; exit}' \
+  "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" 2>/dev/null)
+if [[ -n $current_background && $plasma_background == "$current_background" ]]; then
+  printf '%s\n' 'ok   Plasma wallpaper matches the current Omarchy background'
+else
+  printf '%s\n' 'FAIL Plasma wallpaper does not match the current Omarchy background'
+  failures=$((failures + 1))
+fi
+
+if rg -q 'selection=\$\(slurp' "$HOME/.local/bin/omarchy-capture-region" 2>/dev/null &&
+   ! rg -q 'OMARCHY_SCREENRECORD_USE_PORTAL=true' "$HOME/.local/bin/omarchy-capture-screenrecording" 2>/dev/null; then
+  printf '%s\n' 'ok   screen recording uses Omarchy-style drag selection'
+else
+  printf '%s\n' 'FAIL screen recording is not using the Plasmarchy region selector'
+  failures=$((failures + 1))
+fi
 
 if [[ $(kreadconfig6 --file plasmashellrc --group Shell --key ShellPackage 2>/dev/null) == org.omarchy.plasma.hybrid ]]; then
   printf '%s\n' 'ok   Omarchy Plasma idle lock screen is selected'

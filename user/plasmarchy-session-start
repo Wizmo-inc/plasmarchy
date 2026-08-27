@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Plasma restores its saved wallpaper before autostart applications run. Wait
+# for its scripting endpoint, then make the current Omarchy theme authoritative
+# before starting the hybrid bar.
+
+for ((attempt = 0; attempt < 100; attempt++)); do
+  qdbus6 org.kde.plasmashell /PlasmaShell >/dev/null 2>&1 && break
+  sleep 0.1
+done
+
+theme_hook="$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
+[[ -x $theme_hook ]] && "$theme_hook" session-start
+
+exec qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"

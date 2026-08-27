@@ -119,8 +119,5 @@ kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "$icon_theme"
 
 current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null || true)
 if [[ -f $current_background ]]; then
-  wallpaper_uri=$(jq -Rn --arg value "file://$current_background" '$value')
-  qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
-    "var ds = desktops(); for (var i = 0; i < ds.length; ++i) { ds[i].wallpaperPlugin = 'org.kde.image'; ds[i].currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General']; ds[i].writeConfig('Image', $wallpaper_uri); }" \
-    >/dev/null 2>&1 || true
+  "$HOME/.local/bin/plasmarchy-sync-wallpaper" "$current_background"
 fi
