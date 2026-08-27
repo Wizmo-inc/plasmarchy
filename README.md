@@ -8,6 +8,8 @@ window tasks, minimization, virtual desktops, effects, and overview.
 This is an unofficial community integration. It does not replace or modify
 files owned by the Omarchy package.
 
+Published by **cobraxai**.
+
 ## Features
 
 - Bottom Omarchy Quickshell bar in a Plasma session
@@ -49,6 +51,15 @@ its primary bar at the bottom by default.
 The first tested combination is Omarchy `4.0.0.r1836.g0ae1694-1`, Plasma
 `6.7.4`, and Quickshell `0.3.1`. Omarchy development snapshots may change the
 shell APIs; run `./doctor.sh` after upgrading.
+
+## Omarchy Plugins marketplace
+
+Plasmarchy is listed as a **manual-setup** plugin because it is a complete KDE
+Plasma integration rather than a single shell widget. Adding its small service
+entry point through the marketplace is safe and makes no system changes, but
+it does not install the full desktop integration by itself. Follow the guided
+installation below to install Plasma dependencies, create backups, and choose
+the optional panel and login-screen changes explicitly.
 
 ## Install
 
