@@ -23,14 +23,15 @@ filename="screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png"
 filepath=$output_dir/$filename
 
 case "$mode" in
-  smart|region) capture_mode=(--region) ;;
+  smart|region) capture_mode=(--region --release-capture) ;;
   windows) capture_mode=(--windowundercursor) ;;
   fullscreen) capture_mode=(--fullscreen) ;;
   *) printf 'Unknown screenshot mode: %s\n' "$mode" >&2; exit 2 ;;
 esac
 
-# Background mode still presents KWin's native interactive selector for region
-# captures, but skips Spectacle's editor and notification afterward.
+# Background mode presents KWin's native region selector. Release capture makes
+# the selection final as soon as the mouse button is released, with no Accept
+# click; Spectacle's editor and notification remain disabled afterward.
 spectacle "${capture_mode[@]}" --background --nonotify --output "$filepath"
 [[ -s $filepath ]] || exit 0
 
