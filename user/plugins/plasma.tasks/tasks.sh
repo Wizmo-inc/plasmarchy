@@ -6,22 +6,28 @@
 
 qdbus6 --literal org.kde.KWin /WindowsRunner org.kde.krunner1.Match '' 2>/dev/null |
   perl -ne '
-    while (/\[Argument: \(sssida\{sv\}\) "((?:\\.|[^"])*)", "((?:\\.|[^"])*)", "((?:\\.|[^"])*)",/g) {
-      my ($id, $title, $icon) = ($1, $2, $3);
-      next unless $id =~ /^0_/;
+    # Match only stable window UUIDs here. KWin may emit unescaped quotes in
+    # captions (common for browser tab titles), so parsing runner title fields
+    # would silently omit otherwise valid windows.
+    while (/"(0_\{[0-9a-fA-F-]+\})"/g) {
+      my $id = $1;
       next if $seen{$id}++;
-      for ($title, $icon) { s/\\"/"/g; s/\\n/ /g; s/\t/ /g; }
-      print "$id\t$title\t$icon\n";
+      print "$id\n";
     }
   ' |
-  while IFS=$'\t' read -r id title icon; do
+  while IFS= read -r id; do
     uuid=${id#0_}
     info=$(qdbus6 --literal org.kde.KWin /KWin org.kde.KWin.getWindowInfo "$uuid" 2>/dev/null)
+    title=$(sed -n 's/.*"caption" = \[Variant(QString): "\(.*\)"\], "clientMachine".*/\1/p' <<<"$info")
     minimized=$(sed -n 's/.*"minimized" = \[Variant(bool): \(true\|false\)\].*/\1/p' <<<"$info")
     desktop_file=$(sed -n 's/.*"desktopFile" = \[Variant(QString): "\([^"]*\)"\].*/\1/p' <<<"$info")
     resource_class=$(sed -n 's/.*"resourceClass" = \[Variant(QString): "\([^"]*\)"\].*/\1/p' <<<"$info")
-    [[ -n $title && $resource_class != quickshell ]] || continue
-    [[ -n $icon ]] || icon=$desktop_file
+    skip_taskbar=$(sed -n 's/.*"skipTaskbar" = \[Variant(bool): \(true\|false\)\].*/\1/p' <<<"$info")
+    title=${title//$'\t'/ }
+    title=${title//$'\n'/ }
+    title=${title//\\n/ }
+    [[ -n $title && $resource_class != quickshell && $skip_taskbar != true ]] || continue
+    icon=$desktop_file
     [[ -n $icon ]] || icon=$resource_class
     [[ -n $icon ]] || icon=application-x-executable
     printf '%s\t%s\t%s\t%s\n' "$id" "$title" "$icon" "${minimized:-false}"
