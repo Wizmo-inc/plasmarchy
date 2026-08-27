@@ -11,6 +11,7 @@ Item {
 
     property bool loginFailed: false
     property string statusMessage: ""
+    property string pendingPassword: ""
 
     Kirigami.Theme.inherit: false
     Kirigami.Theme.colorSet: Kirigami.Theme.View
@@ -21,17 +22,39 @@ Item {
     }
 
     function submitPassword() {
-        if (password.text.length > 0) {
-            loginFailed = false
-            statusMessage = ""
-            authenticator.respond(password.text)
+        if (password.text.length === 0 || pendingPassword.length > 0) return
+
+        loginFailed = false
+        pendingPassword = password.text
+
+        // The PAM conversation may have gone idle before the user returns.
+        // Respond immediately when its secret prompt is alive; otherwise
+        // restart it and let onPromptForSecretChanged submit the saved input.
+        if (authenticator.promptForSecret) {
+            respondToPrompt()
+        } else {
+            statusMessage = "Preparing unlock…"
+            authenticator.startAuthenticating()
+            promptTimeout.restart()
         }
+    }
+
+    function respondToPrompt() {
+        if (pendingPassword.length === 0 || !authenticator.promptForSecret) return
+
+        const response = pendingPassword
+        pendingPassword = ""
+        promptTimeout.stop()
+        statusMessage = "Unlocking…"
+        authenticator.respond(response)
     }
 
     Connections {
         target: authenticator
 
         function onFailed(kind) {
+            promptTimeout.stop()
+            lockScreenUi.pendingPassword = ""
             lockScreenUi.loginFailed = true
             lockScreenUi.statusMessage = kind === ScreenLocker.Authenticator.Fingerprint
                 ? "Fingerprint not recognized"
@@ -58,6 +81,9 @@ Item {
 
         function onPromptForSecretChanged() {
             password.forceActiveFocus()
+            if (authenticator.promptForSecret && lockScreenUi.pendingPassword.length > 0) {
+                Qt.callLater(lockScreenUi.respondToPrompt)
+            }
         }
     }
 
@@ -140,7 +166,7 @@ Item {
                     id: password
                     anchors.fill: parent
                     anchors.leftMargin: 20
-                    anchors.rightMargin: 20
+                    anchors.rightMargin: 52
                     verticalAlignment: TextInput.AlignVCenter
                     echoMode: TextInput.Password
                     font.family: "JetBrainsMono Nerd Font"
@@ -155,16 +181,55 @@ Item {
                     text: PasswordSync.password
 
                     onTextChanged: {
-                        lockScreenUi.loginFailed = false
-                        lockScreenUi.statusMessage = ""
+                        if (password.text.length > 0) {
+                            lockScreenUi.loginFailed = false
+                            lockScreenUi.statusMessage = ""
+                        }
                     }
-                    onAccepted: lockScreenUi.submitPassword()
+                    onTextEdited: {
+                        // Wake a stale PAM conversation on the first character,
+                        // mirroring Plasma's stock wake-on-interaction behavior.
+                        if (password.text.length === 1 && !authenticator.promptForSecret) {
+                            authenticator.startAuthenticating()
+                        }
+                    }
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            event.accepted = true
+                            lockScreenUi.submitPassword()
+                        }
+                    }
                 }
 
                 Binding {
                     target: PasswordSync
                     property: "password"
                     value: password.text
+                }
+
+                Item {
+                    id: unlockButton
+                    z: 2
+                    width: 44
+                    height: parent.height
+                    anchors.right: parent.right
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "↵"
+                        color: Kirigami.Theme.textColor
+                        opacity: unlockMouse.containsMouse ? 1 : 0.7
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 20
+                    }
+
+                    MouseArea {
+                        id: unlockMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: lockScreenUi.submitPassword()
+                    }
                 }
             }
         }
@@ -199,6 +264,20 @@ Item {
             property: "opacity"
             to: 1
             duration: 160
+        }
+    }
+
+    Timer {
+        id: promptTimeout
+        interval: 3000
+        repeat: false
+        onTriggered: {
+            if (lockScreenUi.pendingPassword.length > 0) {
+                lockScreenUi.pendingPassword = ""
+                lockScreenUi.loginFailed = true
+                lockScreenUi.statusMessage = "Authentication unavailable — try again"
+                password.forceActiveFocus()
+            }
         }
     }
 

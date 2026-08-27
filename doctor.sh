@@ -72,6 +72,16 @@ else
   failures=$((failures + 1))
 fi
 
+lock_ui=$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml
+if rg -q 'Qt.Key_Return.*Qt.Key_Enter' "$lock_ui" 2>/dev/null &&
+   rg -q 'authenticator\.promptForSecret' "$lock_ui" 2>/dev/null &&
+   rg -q 'pendingPassword' "$lock_ui" 2>/dev/null; then
+  printf '%s\n' 'ok   idle lock supports Enter and stale-authentication recovery'
+else
+  printf '%s\n' 'FAIL idle lock is missing reliable password submission handling'
+  failures=$((failures + 1))
+fi
+
 if qdbus6 org.kde.kglobalaccel /kglobalaccel >/dev/null 2>&1; then
   print_owners=$(qdbus6 --literal org.kde.kglobalaccel /kglobalaccel \
     org.kde.KGlobalAccel.getGlobalShortcutsByKey 16777225 2>/dev/null)
