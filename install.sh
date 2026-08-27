@@ -45,7 +45,7 @@ require() {
   command -v "$1" >/dev/null 2>&1 || { printf 'Missing dependency: %s\n' "$1" >&2; exit 1; }
 }
 
-for command_name in qs qdbus6 jq perl patch python plasma-apply-colorscheme; do
+for command_name in qs qdbus6 jq perl patch python kwriteconfig6 kreadconfig6 plasma-apply-colorscheme; do
   require "$command_name"
 done
 
@@ -71,6 +71,7 @@ backup() {
 backup "$HOME/.config/omarchy/plasma-shell.json"
 backup "$HOME/.config/quickshell/plasma-omarchy"
 backup "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
+backup "$HOME/.config/ksplashrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
@@ -110,6 +111,10 @@ done
 
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
+
+# Keep SDDM's minimal login, but skip Plasma's second branded startup screen.
+kwriteconfig6 --file ksplashrc --group KSplash --key Theme --notify None
+kwriteconfig6 --file ksplashrc --group KSplash --key Engine --notify none
 
 desktop_file=$HOME/.config/autostart/plasma-omarchy-bar.desktop
 {

@@ -28,6 +28,7 @@ restore_or_remove() {
 restore_or_remove "$HOME/.config/omarchy/plasma-shell.json"
 restore_or_remove "$HOME/.config/quickshell/plasma-omarchy"
 restore_or_remove "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
+restore_or_remove "$HOME/.config/ksplashrc"
 restore_or_remove "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 restore_or_remove "$HOME/.local/bin/omarchy-shell"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.agents omatask; do

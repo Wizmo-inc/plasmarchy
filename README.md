@@ -19,6 +19,7 @@ files owned by the Omarchy package.
 - Separate Plasma shell configuration, leaving Hyprland untouched
 - Optional minimal Omarchy SDDM login screen that selects Plasma
 - Timestamped backups, diagnostics, and rollback
+- Minimal login flow with Plasma's redundant startup splash disabled
 
 ## Requirements
 

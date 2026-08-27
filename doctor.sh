@@ -20,7 +20,7 @@ check_file() {
   fi
 }
 
-for command_name in omarchy qs qdbus6 jq perl python plasmashell; do
+for command_name in omarchy qs qdbus6 jq perl python kwriteconfig6 kreadconfig6 plasmashell; do
   check_command "$command_name"
 done
 check_file /usr/share/omarchy/shell/shell.qml
@@ -28,6 +28,13 @@ check_file "$HOME/.config/omarchy/plasma-shell.json"
 check_file "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.agents/Panel.qml"
+
+if [[ $(kreadconfig6 --file ksplashrc --group KSplash --key Theme 2>/dev/null) == None ]] &&
+   [[ $(kreadconfig6 --file ksplashrc --group KSplash --key Engine 2>/dev/null) == none ]]; then
+  printf '%s\n' 'ok   Plasma startup splash is disabled'
+else
+  printf '%s\n' 'note Plasma startup splash is enabled'
+fi
 
 if command -v jq >/dev/null 2>&1 && ! jq -e . "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1; then
   printf '%s\n' 'FAIL plasma-shell.json is invalid JSON'

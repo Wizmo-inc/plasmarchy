@@ -124,8 +124,3 @@ if [[ -f $current_background ]]; then
     "var ds = desktops(); for (var i = 0; i < ds.length; ++i) { ds[i].wallpaperPlugin = 'org.kde.image'; ds[i].currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General']; ds[i].writeConfig('Image', $wallpaper_uri); }" \
     >/dev/null 2>&1 || true
 fi
-
-# Folder View caches icons inside plasmashell. Refreshing the current shell is
-# enough to repaint desktop folders without restarting the whole Plasma session.
-qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.refreshCurrentShell \
-  >/dev/null 2>&1 || true
