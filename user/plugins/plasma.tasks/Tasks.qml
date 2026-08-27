@@ -279,7 +279,11 @@ BarWidget {
             if (event.button === Qt.RightButton) {
               if (root.bar) root.bar.hideTooltip(task)
               root.contextTask = task.modelData
-              taskMenu.popup()
+              taskMenu.popup(
+                task,
+                Math.round((task.width - taskMenu.width) / 2),
+                -taskMenu.implicitHeight - Style.space(6)
+              )
             } else if (event.button === Qt.MiddleButton) {
               root.requestCloseTask(task.modelData)
             } else {
