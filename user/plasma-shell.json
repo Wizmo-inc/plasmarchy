@@ -27,16 +27,19 @@
             {
               "title": "Files",
               "icon": "system-file-manager",
+              "desktopId": "org.kde.dolphin",
               "command": ["dolphin"]
             },
             {
               "title": "Terminal",
               "icon": "utilities-terminal",
+              "desktopId": "foot",
               "command": ["omarchy-launch-terminal"]
             },
             {
               "title": "Google Chrome",
               "icon": "google-chrome",
+              "desktopId": "google-chrome",
               "command": ["omarchy-launch-browser"]
             }
           ]
@@ -96,7 +99,7 @@
   },
   "plugins": [
     {
-      "id": "omarchy.menu"
+      "id": "plasma.menu"
     }
   ]
 }

@@ -28,6 +28,7 @@ check_file "$HOME/.config/omarchy/plasma-shell.json"
 check_file "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.show-desktop/ShowDesktop.qml"
+check_file "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml"
 check_file "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop/contents/code/main.js"
 if [[ -f $HOME/.config/omarchy/plugins/plasma.agents/Panel.qml ]] ||
    compgen -G "$HOME/.config/omarchy/plugins/*.agents/Panel.qml" >/dev/null; then
@@ -38,6 +39,7 @@ else
 fi
 check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml"
 check_file "$HOME/.local/bin/omarchy-capture-screenshot"
+check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
 
 if [[ $(kreadconfig6 --file kscreenlockerrc --group Greeter --key Theme 2>/dev/null) == org.omarchy.plasma.hybrid ]]; then
   printf '%s\n' 'ok   Omarchy Plasma idle lock screen is selected'
@@ -93,6 +95,15 @@ if jq -e '.bar.layout.left[] | select(.id == "plasma.tasks") | .launchers | leng
   printf '%s\n' 'ok   quick launchers are configured before window tasks'
 else
   printf '%s\n' 'FAIL quick launchers are missing from plasma.tasks'
+  failures=$((failures + 1))
+fi
+
+if jq -e '.plugins[] | select(.id == "plasma.menu")' \
+  "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1 &&
+  rg -q 'Pin to Quick Launch' "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   graphical app actions are installed'
+else
+  printf '%s\n' 'FAIL graphical app actions are missing'
   failures=$((failures + 1))
 fi
 

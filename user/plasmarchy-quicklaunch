@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Manage Plasmarchy launchers from the graphical application menu."""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+def notify(message: str, *, error: bool = False) -> None:
+    if os.environ.get("PLASMARCHY_NO_NOTIFY") == "1":
+        return
+    icon = "dialog-error" if error else "applications-other"
+    for command in (
+        ["omarchy-notification-send", "-i", icon, "Plasmarchy", message],
+        ["notify-send", "-i", icon, "Plasmarchy", message],
+    ):
+        if shutil.which(command[0]):
+            subprocess.run(command, check=False)
+            return
+
+
+def normalized_id(value: str) -> str:
+    return value.removesuffix(".desktop").strip()
+
+
+def task_entry(config: dict) -> dict:
+    layout = config.setdefault("bar", {}).setdefault("layout", {})
+    for section in ("left", "center", "right"):
+        for entry in layout.get(section, []):
+            if entry.get("id") == "plasma.tasks":
+                return entry
+    raise ValueError("plasma.tasks is missing from plasma-shell.json")
+
+
+def save_config(path: Path, config: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(config, stream, indent=2, ensure_ascii=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.chmod(temporary, mode)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def change_pin(action: str, app_id: str, label: str, icon: str) -> None:
+    default = Path.home() / ".config/omarchy/plasma-shell.json"
+    path = Path(os.environ.get("PLASMARCHY_SHELL_CONFIG", default)).expanduser()
+    with path.open(encoding="utf-8") as stream:
+        config = json.load(stream)
+    entry = task_entry(config)
+    launchers = entry.setdefault("launchers", [])
+    matches = lambda item: normalized_id(str(item.get("desktopId", ""))) == app_id
+
+    if action == "pin":
+        if not any(matches(item) for item in launchers):
+            launchers.append({
+                "title": label,
+                "icon": icon or "application-x-executable",
+                "desktopId": app_id,
+                "command": ["uwsm-app", "--", "gtk-launch", f"{app_id}.desktop"],
+            })
+            save_config(path, config)
+        notify(f"Pinned {label} to Quick Launch")
+    else:
+        entry["launchers"] = [item for item in launchers if not matches(item)]
+        save_config(path, config)
+        notify(f"Removed {label} from Quick Launch")
+
+
+def application_dirs() -> list[Path]:
+    data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+    data_dirs = os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share")
+    return [data_home / "applications", *(Path(item) / "applications" for item in data_dirs.split(":") if item)]
+
+
+def find_desktop_file(app_id: str) -> Path | None:
+    filename = f"{app_id}.desktop"
+    for directory in application_dirs():
+        direct = directory / filename
+        if direct.is_file():
+            return direct
+        if directory.is_dir():
+            for candidate in directory.rglob("*.desktop"):
+                relative_id = str(candidate.relative_to(directory)).removesuffix(".desktop").replace("/", "-")
+                if relative_id == app_id:
+                    return candidate
+    return None
+
+
+def add_to_desktop(app_id: str, label: str) -> None:
+    source = find_desktop_file(app_id)
+    if source is None:
+        raise FileNotFoundError(f"Could not find the launcher for {label}")
+
+    override = os.environ.get("PLASMARCHY_DESKTOP_DIR")
+    if override:
+        desktop = Path(override).expanduser()
+    else:
+        result = subprocess.run(["xdg-user-dir", "DESKTOP"], capture_output=True, text=True, check=False)
+        desktop = Path(result.stdout.strip() or Path.home() / "Desktop").expanduser()
+    desktop.mkdir(parents=True, exist_ok=True)
+    destination = desktop / source.name
+    if destination.exists():
+        notify(f"{label} is already on the Desktop")
+        return
+
+    shutil.copy2(source, destination)
+    destination.chmod(destination.stat().st_mode | stat.S_IXUSR)
+    if shutil.which("gio"):
+        subprocess.run(["gio", "set", str(destination), "metadata::trusted", "true"], check=False)
+    notify(f"Added {label} to the Desktop")
+
+
+def main() -> int:
+    if len(sys.argv) != 5 or sys.argv[1] not in {"pin", "unpin", "desktop"}:
+        print("usage: plasmarchy-quicklaunch {pin|unpin|desktop} APP_ID LABEL ICON", file=sys.stderr)
+        return 2
+    action, raw_id, label, icon = sys.argv[1:]
+    app_id = normalized_id(raw_id)
+    if not app_id:
+        notify("The selected app has no desktop ID", error=True)
+        return 1
+    try:
+        if action == "desktop":
+            add_to_desktop(app_id, label)
+        else:
+            change_pin(action, app_id, label, icon)
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        notify(str(error), error=True)
+        print(f"plasmarchy-quicklaunch: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

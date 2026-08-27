@@ -12,6 +12,7 @@ files owned by the Omarchy package.
 
 - Bottom Omarchy Quickshell bar in a Plasma session
 - Theme-aware quick launchers for Files, Terminal, and Chrome before open windows
+- Right-click app actions to pin or unpin Quick Launch icons and add desktop shortcuts
 - KWin-aware window task buttons with click-to-minimize behavior
 - Show Desktop minimize/restore toggle that keeps the bottom bar visible
 - Plasma virtual desktop switcher and KRunner shortcut
@@ -71,12 +72,15 @@ not redistribute those assets.
 Log out, choose **Plasma (Wayland)**, and log back in. Existing Hyprland and
 `~/.config/omarchy/shell.json` settings are left intact.
 
-### Customize quick launchers
+### Add apps to Quick Launch or the desktop
 
-Pinned apps are the `launchers` array on the `plasma.tasks` entry in
-`~/.config/omarchy/plasma-shell.json`. Each entry accepts a tooltip `title`,
-theme icon name, and argument-safe command array. Saving the file hot-reloads
-the bar; no logout or restart is required.
+Open the application launcher in the bottom-left corner, then right-click any
+app. Choose **Pin to Quick Launch** or **Add to Desktop**. A pinned app can be
+removed from the same menu with **Unpin from Quick Launch**. Changes hot-reload;
+no logout or restart is required.
+
+Advanced users can still edit the `launchers` array on the `plasma.tasks`
+entry in `~/.config/omarchy/plasma-shell.json`.
 
 ## Diagnose and remove
 
@@ -92,8 +96,9 @@ SDDM configuration when applicable.
 
 ## How it works
 
-The installer derives `shell.qml` and the Agents plugin from the currently
-installed Omarchy release, then applies the small Plasma-specific adaptations.
+The installer derives `shell.qml`, the application menu, and the Agents plugin
+from the currently installed Omarchy release, then applies the small
+Plasma-specific adaptations.
 Shared Omarchy shell directories are symlinked read-only. User-owned KWin
 widgets live in `~/.config/omarchy/plugins`, while a compatibility wrapper
 routes Omarchy IPC to the correct Quickshell instance in Plasma and falls back

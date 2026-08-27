@@ -1,0 +1,215 @@
+--- a/Menu.qml
++++ b/Menu.qml
+@@ -2,6 +2,7 @@
+ import Quickshell.Io
+ import Quickshell.Wayland
+ import QtQuick
++import QtQuick.Controls as QQC
+ import qs.Commons
+ import qs.Ui
+ import "MenuModel.js" as MenuModel
+@@ -80,7 +81,12 @@
+   readonly property var appLibrary: root.shell ? root.shell.appLibrary : null
+   property bool deleteConfirmOpen: false
+   property var deleteTarget: null
+-  onOpenedChanged: if (!opened) { deleteConfirmOpen = false; deleteTarget = null }
++  property var pinnedAppIds: ({})
++  onOpenedChanged: if (!opened) {
++    deleteConfirmOpen = false
++    deleteTarget = null
++    appActions.close()
++  }
+   // Bound to the central [menu] section in shell.toml via Color.qml.
+   // Each color already includes its alpha companion (composed in the
+   // singleton), so consumers can drop them straight into a Rectangle.
+@@ -141,6 +147,51 @@
+     Util.execDetached(command)
+   }
+ 
++  function normalizeDesktopId(value) {
++    var id = String(value || "").trim()
++    return id.slice(-8) === ".desktop" ? id.slice(0, -8) : id
++  }
++
++  function loadPinnedApps(rawText) {
++    var next = ({})
++    try {
++      var config = JSON.parse(String(rawText || "{}"))
++      var layout = config.bar && config.bar.layout ? config.bar.layout : ({})
++      var sections = ["left", "center", "right"]
++      for (var s = 0; s < sections.length; ++s) {
++        var entries = Array.isArray(layout[sections[s]]) ? layout[sections[s]] : []
++        for (var i = 0; i < entries.length; ++i) {
++          if (!entries[i] || entries[i].id !== "plasma.tasks") continue
++          var launchers = Array.isArray(entries[i].launchers) ? entries[i].launchers : []
++          for (var j = 0; j < launchers.length; ++j) {
++            var id = root.normalizeDesktopId(launchers[j].desktopId)
++            if (id) next[id] = true
++          }
++        }
++      }
++    } catch (error) { }
++    root.pinnedAppIds = next
++  }
++
++  function isPinned(appId) {
++    return root.pinnedAppIds[root.normalizeDesktopId(appId)] === true
++  }
++
++  function openAppActions(appId, label, icon) {
++    appActions.appId = root.normalizeDesktopId(appId)
++    appActions.appLabel = String(label || appId)
++    appActions.appIcon = String(icon || "application-x-executable")
++    appActions.popup()
++  }
++
++  function performAppAction(action) {
++    if (!appActions.appId) return
++    var helper = Quickshell.env("HOME") + "/.local/bin/plasmarchy-quicklaunch"
++    var args = [helper, action, appActions.appId, appActions.appLabel, appActions.appIcon]
++    root.cancel()
++    Quickshell.execDetached(args)
++  }
++
+   // Menu rows only surface their detail while a search is narrowing them;
+   // dmenu rows carry caller-supplied subtext that must always be visible.
+   function rowHeightForDetail(detail) {
+@@ -972,6 +1023,16 @@
+   }
+ 
+   FileView {
++    id: quickLaunchFile
++    path: Quickshell.env("HOME") + "/.config/omarchy/plasma-shell.json"
++    watchChanges: true
++    printErrors: false
++    onLoaded: root.loadPinnedApps(text())
++    onLoadFailed: root.loadPinnedApps("{}")
++    onFileChanged: reload()
++  }
++
++  FileView {
+     id: userMenuFile
+     path: root.userMenuPath
+     watchChanges: true
+@@ -1113,6 +1174,60 @@
+ 
+       MouseArea { anchors.fill: parent; onClicked: {} }
+ 
++      QQC.Menu {
++        id: appActions
++        property string appId: ""
++        property string appLabel: ""
++        property string appIcon: ""
++
++        modal: true
++        closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutside
++        padding: Style.space(5)
++
++        background: Rectangle {
++          color: root.background
++          radius: root.cornerRadius
++          border.width: 1
++          border.color: root.border
++        }
++
++        QQC.MenuItem {
++          id: pinAction
++          text: root.isPinned(appActions.appId) ? "Unpin from Quick Launch" : "Pin to Quick Launch"
++          height: Style.space(38)
++          onTriggered: root.performAppAction(root.isPinned(appActions.appId) ? "unpin" : "pin")
++          contentItem: Text {
++            text: pinAction.text
++            color: pinAction.highlighted ? root.selectedText : root.foreground
++            font.family: root.fontFamily
++            font.pixelSize: Style.font.body
++            verticalAlignment: Text.AlignVCenter
++          }
++          background: Rectangle {
++            color: pinAction.highlighted ? root.selectedBackground : "transparent"
++            radius: root.cornerRadius
++          }
++        }
++
++        QQC.MenuItem {
++          id: desktopAction
++          text: "Add to Desktop"
++          height: Style.space(38)
++          onTriggered: root.performAppAction("desktop")
++          contentItem: Text {
++            text: desktopAction.text
++            color: desktopAction.highlighted ? root.selectedText : root.foreground
++            font.family: root.fontFamily
++            font.pixelSize: Style.font.body
++            verticalAlignment: Text.AlignVCenter
++          }
++          background: Rectangle {
++            color: desktopAction.highlighted ? root.selectedBackground : "transparent"
++            radius: root.cornerRadius
++          }
++        }
++      }
++
+       Item {
+         id: keyCatcher
+         anchors.fill: parent
+@@ -1381,6 +1496,7 @@
+               MouseArea {
+                 id: mouseArea
+                 anchors.fill: parent
++                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                 hoverEnabled: true
+                 cursorShape: row.disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
+                 onEntered: root.selectFromPointer(row.index, row, {
+@@ -1390,10 +1506,14 @@
+                 onPositionChanged: function(mouse) {
+                   root.selectFromPointer(row.index, row, mouse)
+                 }
+-                onClicked: {
++                onClicked: function(mouse) {
+                   if (row.disabled) return
+                   root.cursorActive = true
+                   root.selectedIndex = row.index
++                  if (mouse.button === Qt.RightButton && row.isApp) {
++                    root.openAppActions(row.appId, row.label, row.appIcon)
++                    return
++                  }
+                   root.activateIndex(row.index, true)
+                 }
+               }
+--- a/manifest.json
++++ b/manifest.json
+@@ -1,10 +1,10 @@
+ {
+   "schemaVersion": 1,
+-  "id": "omarchy.menu",
+-  "name": "Omarchy menu",
++  "id": "plasma.menu",
++  "name": "Plasmarchy application menu",
+   "version": "1.0.0",
+-  "author": "Omarchy",
+-  "description": "Quickshell-powered Omarchy command menu",
++  "author": "Omarchy and Wizmo-inc contributors",
++  "description": "Omarchy command menu with Plasmarchy desktop and quick-launch actions",
+   "kinds": [
+     "menu",
+     "bar-widget"
+--- a/BarWidget.qml
++++ b/BarWidget.qml
+@@ -3,7 +3,7 @@
+ 
+ BarWidget {
+   id: root
+-  moduleName: "omarchy.menu"
++  moduleName: "plasma.menu"
+ 
+   implicitWidth: button.implicitWidth
+   implicitHeight: button.implicitHeight
+@@ -18,7 +18,7 @@
+     onPressed: function(button) {
+       if (!root.bar) return
+       if (button === Qt.RightButton) root.bar.run("xdg-terminal-exec")
+-      else root.bar.run("omarchy-shell shell toggle omarchy.menu '{\"menu\":\"root\"}'")
++      else root.bar.run("omarchy-shell shell toggle plasma.menu '{\"menu\":\"root\"}'")
+     }
+   }
+ }

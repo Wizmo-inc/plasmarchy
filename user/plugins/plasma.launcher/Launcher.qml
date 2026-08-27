@@ -10,7 +10,7 @@ BarWidget {
     Quickshell.execDetached([
       "qs", "ipc", "-n", "-p",
       Quickshell.env("HOME") + "/.config/quickshell/plasma-omarchy",
-      "call", "--", "shell", "toggle", "omarchy.menu",
+      "call", "--", "shell", "toggle", "plasma.menu",
       JSON.stringify({ "menu": route || "root" })
     ])
   }

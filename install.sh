@@ -57,6 +57,10 @@ done
   printf 'The installed Omarchy version does not provide the Agents plugin.\n' >&2
   exit 1
 }
+[[ -d $omarchy_root/shell/plugins/menu ]] || {
+  printf 'The installed Omarchy version does not provide the application menu plugin.\n' >&2
+  exit 1
+}
 jq -e '.bar.position == "bottom"' "$repo_dir/user/plasma-shell.json" >/dev/null || {
   printf '%s\n' 'Plasmarchy package error: the default bar position must be bottom.' >&2
   exit 1
@@ -82,11 +86,12 @@ backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
 backup "$HOME/.local/bin/omarchy-capture-screenshot"
+backup "$HOME/.local/bin/plasmarchy-quicklaunch"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 backup "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents plasma.menu omatask; do
   backup "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 
@@ -116,6 +121,13 @@ if ! patch --silent --forward -d "$HOME/.config/omarchy/plugins/plasma.agents" -
   printf '%s\n' 'Warning: the Agents menu patch did not match this Omarchy version; the stock right-click action remains.' >&2
 fi
 
+rm -rf -- "$HOME/.config/omarchy/plugins/plasma.menu"
+cp -a -- "$omarchy_root/shell/plugins/menu" "$HOME/.config/omarchy/plugins/plasma.menu"
+if ! patch --silent --forward -d "$HOME/.config/omarchy/plugins/plasma.menu" -p1 < "$repo_dir/patches/menu-plasma.patch"; then
+  printf '%s\n' 'The Plasmarchy application-menu patch does not match this Omarchy version.' >&2
+  exit 1
+fi
+
 cp -- "$omarchy_root/shell/shell.qml" "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
 perl -pi -e 's#home \+ "/\.config/omarchy/shell\.json"#home + "/.config/omarchy/plasma-shell.json"#' \
   "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
@@ -125,6 +137,7 @@ done
 
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
+install -m 0755 "$repo_dir/user/plasmarchy-quicklaunch" "$HOME/.local/bin/plasmarchy-quicklaunch"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 
 rm -rf -- "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"

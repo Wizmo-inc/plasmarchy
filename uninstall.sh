@@ -37,10 +37,11 @@ restore_or_remove "$HOME/.config/kwinrc"
 restore_or_remove "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 restore_or_remove "$HOME/.local/bin/omarchy-shell"
 restore_or_remove "$HOME/.local/bin/omarchy-capture-screenshot"
+restore_or_remove "$HOME/.local/bin/plasmarchy-quicklaunch"
 restore_or_remove "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 restore_or_remove "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 restore_or_remove "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents plasma.menu omatask; do
   restore_or_remove "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 restore_or_remove "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
