@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+notify_error() {
+  local message=$1
+  if command -v omarchy-notification-send >/dev/null 2>&1; then
+    omarchy-notification-send -i dialog-error "Plasmarchy" "$message"
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -i dialog-error "Plasmarchy" "$message"
+  fi
+  printf 'Plasmarchy: %s\n' "$message" >&2
+}
+
+[[ $# -ge 1 ]] || {
+  printf '%s\n' 'Usage: plasmarchy-open-agent <agent> [directory]' >&2
+  exit 2
+}
+
+agent=$1
+directory=${2:-$PWD}
+
+if [[ $directory == file://* ]]; then
+  directory=${directory#file://}
+fi
+if [[ ! -d $directory ]]; then
+  notify_error "That folder is no longer available: $directory"
+  exit 1
+fi
+directory=$(realpath -- "$directory")
+
+case "$agent" in
+  codex)    name=Codex;          executable=codex;    command=(codex --approve-for-me) ;;
+  claude)   name='Claude Code';  executable=claude;   command=(claude --permission-mode auto) ;;
+  gemini)   name=Gemini;         executable=gemini;   command=(gemini --yolo) ;;
+  opencode) name=OpenCode;       executable=opencode; command=(opencode --auto) ;;
+  pi)       name=Pi;             executable=pi;       command=(pi) ;;
+  omp)      name='Oh My Pi';     executable=omp;      command=(omp --auto-approve) ;;
+  ori)      name=Ori;            executable=ori;      command=(ori code) ;;
+  grok)     name=Grok;           executable=grok;     command=(grok --permission-mode bypassPermissions) ;;
+  agy)      name=Antigravity;    executable=agy;      command=(agy --dangerously-skip-permissions) ;;
+  copilot)  name='GitHub Copilot'; executable=copilot; command=(copilot --allow-all) ;;
+  crush)    name=Crush;          executable=crush;    command=(crush --yolo) ;;
+  *)
+    notify_error "Unsupported coding agent: $agent"
+    exit 2
+    ;;
+esac
+
+if ! command -v "$executable" >/dev/null 2>&1; then
+  notify_error "$name is not installed. Refresh the agent list after installing it."
+  exit 1
+fi
+
+if [[ ${PLASMARCHY_AGENT_DRY_RUN:-false} == true ]]; then
+  printf 'directory=%q\n' "$directory"
+  printf 'command='
+  printf '%q ' "${command[@]}"
+  printf '\n'
+  exit 0
+fi
+
+exec setsid xdg-terminal-exec \
+  --app-id=org.omarchy.agent \
+  --title="$name — $(basename -- "$directory")" \
+  --dir="$directory" \
+  -e "${command[@]}"

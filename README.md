@@ -15,6 +15,7 @@ Published by **cobraxai**.
 - Bottom Omarchy Quickshell bar in a Plasma session
 - Theme-aware quick launchers for Files, Terminal, and Chrome before open windows
 - Right-click app actions to pin or unpin Quick Launch icons and add desktop shortcuts
+- Dolphin **Open with Agent** folder submenu generated from installed coding agents
 - KWin-aware window task buttons with click-to-minimize behavior
 - Right-click Close menu for every running application or folder task
 - Show Desktop minimize/restore toggle that keeps the bottom bar visible
@@ -87,6 +88,12 @@ The SDDM option is the only part that requests `sudo`. It copies visual assets
 from the Omarchy theme already installed on your machine; this repository does
 not redistribute those assets.
 
+Managed state and desktop entries are written through restrictive randomized
+temporary files, flushed, and atomically replaced. The installer refuses
+symlinked managed paths. Optional SDDM backups are read into the user-owned
+backup without privileged writes, while system restoration uses validated,
+same-directory atomic replacements.
+
 Log out, choose **Plasma (Wayland)**, and log back in. Existing Hyprland and
 `~/.config/omarchy/shell.json` settings are left intact.
 
@@ -99,6 +106,14 @@ no logout or restart is required.
 
 Advanced users can still edit the `launchers` array on the `plasma.tasks`
 entry in `~/.config/omarchy/plasma-shell.json`.
+
+### Open a folder with an agent
+
+Right-click a folder—or empty space inside the current Dolphin folder—and open
+**Open with Agent**. Choose any detected coding agent to start it in that exact
+directory. The submenu supports Codex, Claude Code, Gemini, OpenCode, and the
+other agents supported by Omarchy. Use **Refresh Agent List** after installing
+or removing an agent; Plasmarchy also refreshes the list automatically at login.
 
 ## Diagnose and remove
 

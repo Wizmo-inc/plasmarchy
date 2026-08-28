@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.wizmoinc.plasmarchy",
   "name": "Plasmarchy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "cobraxai",
   "license": "MIT",
   "description": "The Omarchy shell and themes on KDE Plasma with mouse-first window management.",

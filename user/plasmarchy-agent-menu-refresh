@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+menu_dir=${XDG_DATA_HOME:-$HOME/.local/share}/kio/servicemenus
+menu_file=$menu_dir/plasmarchy-open-with-agent.desktop
+notify=false
+[[ ${1:-} == --notify ]] && notify=true
+
+# id|display name|executable|mise package. Keep this aligned with plasmarchy-open-agent and
+# Omarchy's supported default-agent list; Gemini is included by its native CLI
+# name for installations that predate the agy alias.
+agent_specs=(
+  'codex|Codex|codex|codex'
+  'claude|Claude Code|claude|claude'
+  'gemini|Gemini|gemini|gemini'
+  'opencode|OpenCode|opencode|opencode'
+  'pi|Pi|pi|pi'
+  'omp|Oh My Pi|omp|github:can1357/oh-my-pi'
+  'ori|Ori|ori|github:OpenRouterLabs/ori-releases'
+  'grok|Grok|grok|npm:@xai-official/grok'
+  'agy|Antigravity|agy|antigravity-cli'
+  'copilot|GitHub Copilot|copilot|copilot'
+  'crush|Crush|crush|crush'
+)
+
+mkdir -p "$menu_dir"
+temporary=$(mktemp "$menu_dir/.plasmarchy-agent-menu.XXXXXX")
+trap 'rm -f -- "$temporary"' EXIT
+
+actions=()
+installed_specs=()
+for spec in "${agent_specs[@]}"; do
+  IFS='|' read -r id name executable package <<<"$spec"
+  executable_path=$(command -v "$executable" 2>/dev/null) || continue
+  # Omarchy may leave a lazy mise installer shim in ~/.local/bin. Do not show
+  # it as installed until its backing tool is actually present.
+  if grep -q 'mise use -g --quiet' "$executable_path" 2>/dev/null; then
+    mise where "$package" >/dev/null 2>&1 || continue
+  fi
+  actions+=("$id")
+  installed_specs+=("$spec")
+done
+actions+=(refreshAgentList)
+
+{
+  printf '%s\n' '[Desktop Entry]'
+  printf '%s\n' 'Type=Service'
+  printf '%s\n' 'Name=Plasmarchy Open with Agent'
+  printf '%s\n' 'X-KDE-ServiceTypes=KonqPopupMenu/Plugin'
+  printf '%s\n' 'MimeType=inode/directory;'
+  printf 'Actions=%s;\n' "$(IFS=';'; printf '%s' "${actions[*]}")"
+  printf '%s\n' 'X-KDE-Submenu=Open with Agent'
+  printf '%s\n' 'X-KDE-Priority=TopLevel'
+  printf '%s\n' 'X-KDE-Protocols=file'
+  printf '%s\n' 'X-KDE-RequiredNumberOfUrls=1'
+  printf '%s\n' 'Icon=system-run'
+  printf '\n'
+
+  for spec in "${installed_specs[@]}"; do
+    IFS='|' read -r id name executable package <<<"$spec"
+    printf '[Desktop Action %s]\n' "$id"
+    printf 'Name=%s\n' "$name"
+    printf '%s\n' 'Icon=utilities-terminal'
+    printf 'Exec=plasmarchy-open-agent %s %%f\n\n' "$id"
+  done
+
+  printf '%s\n' '[Desktop Action refreshAgentList]'
+  printf '%s\n' 'Name=Refresh Agent List'
+  printf '%s\n' 'Icon=view-refresh'
+  printf '%s\n' 'Exec=plasmarchy-agent-menu-refresh --notify'
+} > "$temporary"
+
+chmod 0755 "$temporary"
+sync -f "$temporary"
+mv -f -- "$temporary" "$menu_file"
+sync -f "$menu_dir"
+trap - EXIT
+kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+
+if $notify; then
+  names=()
+  for spec in "${installed_specs[@]}"; do
+    IFS='|' read -r id name executable package <<<"$spec"
+    names+=("$name")
+  done
+  message="Agent menu refreshed"
+  ((${#names[@]})) && message+=" — $(IFS=', '; printf '%s' "${names[*]}")"
+  if command -v omarchy-notification-send >/dev/null 2>&1; then
+    omarchy-notification-send -i view-refresh "Plasmarchy" "$message"
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -i view-refresh "Plasmarchy" "$message"
+  fi
+fi

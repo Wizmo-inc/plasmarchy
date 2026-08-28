@@ -44,7 +44,10 @@ check_file "$HOME/.local/bin/omarchy-capture-screenrecording"
 check_file "$HOME/.local/bin/plasmarchy-session-start"
 check_file "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
+check_file "$HOME/.local/bin/plasmarchy-open-agent"
+check_file "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 check_file "$HOME/.local/bin/plasmarchy-themes-handler"
+check_file "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 check_file "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml"
 
 current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null)

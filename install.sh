@@ -5,7 +5,6 @@ repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 omarchy_root=${OMARCHY_PATH:-/usr/share/omarchy}
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-plasma-hybrid
 stamp=$(date +%Y%m%d-%H%M%S)
-backup_dir=$state_dir/backups/$stamp
 with_sddm=false
 replace_panel=false
 install_deps=false
@@ -31,6 +30,84 @@ done
 [[ -n ${HOME:-} && $HOME != / ]] || {
   printf '%s\n' 'Refusing to install with an empty or root HOME.' >&2
   exit 1
+}
+
+assert_user_path_safe() {
+  local path=$1 current=$HOME relative part
+  case "$path" in
+    "$HOME"|"$HOME"/*) ;;
+    *) printf 'Refusing path outside HOME: %s\n' "$path" >&2; exit 1 ;;
+  esac
+  [[ ! -L $HOME ]] || { printf 'Refusing symlinked HOME: %s\n' "$HOME" >&2; exit 1; }
+  relative=${path#"$HOME"}
+  relative=${relative#/}
+  IFS='/' read -r -a parts <<<"$relative"
+  for part in "${parts[@]}"; do
+    [[ -n $part ]] || continue
+    current=$current/$part
+    [[ ! -L $current ]] || {
+      printf 'Refusing symlinked path component: %s\n' "$current" >&2
+      exit 1
+    }
+  done
+}
+
+assert_system_path_safe() {
+  local path=$1 current= part
+  [[ $path == /* ]] || { printf 'Refusing non-absolute system path: %s\n' "$path" >&2; exit 1; }
+  IFS='/' read -r -a parts <<<"${path#/}"
+  for part in "${parts[@]}"; do
+    [[ -n $part ]] || continue
+    current=$current/$part
+    [[ ! -L $current ]] || {
+      printf 'Refusing symlinked system path component: %s\n' "$current" >&2
+      exit 1
+    }
+  done
+}
+
+atomic_write() {
+  local target=$1 mode=${2:-0600} parent temporary
+  parent=$(dirname -- "$target")
+  assert_user_path_safe "$parent"
+  mkdir -p "$parent"
+  assert_user_path_safe "$target"
+  temporary=$(mktemp --tmpdir="$parent" ".$(basename -- "$target").XXXXXX")
+  chmod 0600 "$temporary"
+  if ! cat > "$temporary"; then
+    rm -f -- "$temporary"
+    return 1
+  fi
+  chmod "$mode" "$temporary"
+  sync -f "$temporary"
+  assert_user_path_safe "$target"
+  mv -T -- "$temporary" "$target"
+  sync -f "$parent"
+}
+
+atomic_sudo_write() {
+  local target=$1 mode=${2:-0644} parent temporary
+  parent=$(dirname -- "$target")
+  assert_system_path_safe "$parent"
+  assert_system_path_safe "$target"
+  temporary=$(sudo mktemp --tmpdir="$parent" ".plasmarchy.$(basename -- "$target").XXXXXX")
+  if ! sudo tee "$temporary" >/dev/null; then
+    sudo rm -f -- "$temporary"
+    return 1
+  fi
+  sudo chmod "$mode" "$temporary"
+  sudo sync -f "$temporary"
+  assert_system_path_safe "$target"
+  sudo mv -T -- "$temporary" "$target"
+  sudo sync -f "$parent"
+}
+
+backup_root_file() {
+  local source=$1 target=$2
+  assert_system_path_safe "$source"
+  assert_user_path_safe "$target"
+  sudo test -f "$source" || return 0
+  sudo cat -- "$source" | atomic_write "$target" 0600
 }
 
 if $install_deps; then
@@ -66,7 +143,11 @@ jq -e '.bar.position == "bottom"' "$repo_dir/user/plasma-shell.json" >/dev/null 
   exit 1
 }
 
-mkdir -p "$backup_dir" "$state_dir"
+assert_user_path_safe "$state_dir"
+mkdir -p "$state_dir/backups"
+chmod 0700 "$state_dir" "$state_dir/backups"
+backup_dir=$(mktemp -d "$state_dir/backups/$stamp.XXXXXX")
+chmod 0700 "$backup_dir"
 
 backup() {
   local source=$1 relative
@@ -93,7 +174,10 @@ backup "$HOME/.local/bin/omarchy-capture-screenrecording"
 backup "$HOME/.local/bin/plasmarchy-session-start"
 backup "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 backup "$HOME/.local/bin/plasmarchy-quicklaunch"
+backup "$HOME/.local/bin/plasmarchy-open-agent"
+backup "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 backup "$HOME/.local/bin/plasmarchy-themes-handler"
+backup "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 backup "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
 backup "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder"
@@ -111,6 +195,7 @@ mkdir -p \
   "$HOME/.config/autostart" \
   "$HOME/.local/bin" \
   "$HOME/.local/share/applications" \
+  "$HOME/.local/share/kio/servicemenus" \
   "$HOME/.local/share/plasma/plasmoids" \
   "$HOME/.local/share/plasma/shells" \
   "$HOME/.local/share/kwin/scripts"
@@ -152,10 +237,13 @@ install -m 0755 "$repo_dir/user/omarchy-capture-screenrecording" "$HOME/.local/b
 install -m 0755 "$repo_dir/user/plasmarchy-session-start" "$HOME/.local/bin/plasmarchy-session-start"
 install -m 0755 "$repo_dir/user/plasmarchy-sync-wallpaper" "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 install -m 0755 "$repo_dir/user/plasmarchy-quicklaunch" "$HOME/.local/bin/plasmarchy-quicklaunch"
+install -m 0755 "$repo_dir/user/plasmarchy-open-agent" "$HOME/.local/bin/plasmarchy-open-agent"
+install -m 0755 "$repo_dir/user/plasmarchy-agent-menu-refresh" "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 install -m 0755 "$repo_dir/user/plasmarchy-themes-handler" "$HOME/.local/bin/plasmarchy-themes-handler"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 install -m 0644 "$repo_dir/user/org.plasmarchy.themes.desktop" \
   "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
+"$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 
 # Derive Plasma's exact installed Folder View containment and add the Omarchy
 # theme chooser to its blank-desktop contextual actions. The user copy shadows
@@ -169,8 +257,8 @@ desktop_containment_target=$HOME/.local/share/plasma/plasmoids/org.kde.plasma.fo
 }
 rm -rf -- "$desktop_containment_target"
 cp -a -- "$desktop_containment_source" "$desktop_containment_target"
-jq 'del(."X-Plasma-RootPath")' "$folder_metadata_source" > "$desktop_containment_target/metadata.json.tmp"
-mv -- "$desktop_containment_target/metadata.json.tmp" "$desktop_containment_target/metadata.json"
+jq 'del(."X-Plasma-RootPath")' "$folder_metadata_source" | \
+  atomic_write "$desktop_containment_target/metadata.json" 0644
 patch --silent --forward -d "$desktop_containment_target" -p1 \
   < "$repo_dir/patches/desktop-containment-themes.patch"
 
@@ -261,7 +349,7 @@ kwriteconfig6 --file ksplashrc --group KSplash --key Theme --notify None
 kwriteconfig6 --file ksplashrc --group KSplash --key Engine --notify none
 
 desktop_file=$HOME/.config/autostart/plasma-omarchy-bar.desktop
-{
+generate_autostart_entry() {
   printf '%s\n' '[Desktop Entry]'
   printf '%s\n' 'Type=Application'
   printf '%s\n' 'Name=Omarchy Bar for Plasma'
@@ -270,7 +358,8 @@ desktop_file=$HOME/.config/autostart/plasma-omarchy-bar.desktop
   printf '%s\n' 'OnlyShowIn=KDE;'
   printf '%s\n' 'X-KDE-autostart-after=panel'
   printf '%s\n' 'X-KDE-StartupNotify=false'
-} > "$desktop_file"
+}
+generate_autostart_entry | atomic_write "$desktop_file" 0644
 
 if $replace_panel && qdbus6 org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
   qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \
@@ -282,28 +371,46 @@ if $with_sddm; then
     printf '%s\n' 'The Omarchy SDDM theme is not installed.' >&2
     exit 1
   }
-  sudo mkdir -p /usr/local/share/sddm/themes /etc/sddm.conf.d "$backup_dir/etc/sddm.conf.d"
+  assert_system_path_safe /usr/local/share/sddm/themes
+  assert_system_path_safe /etc/sddm.conf.d
+  sudo mkdir -p /usr/local/share/sddm/themes /etc/sddm.conf.d
+  mkdir -p "$backup_dir/etc/sddm.conf.d"
   for config_file in /etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf.disabled /etc/sddm.conf.d/zz-omarchy-plasma-theme.conf; do
-    if sudo test -e "$config_file"; then
-      sudo cp -a -- "$config_file" "$backup_dir/etc/sddm.conf.d/"
-    fi
+    backup_root_file "$config_file" "$backup_dir/etc/sddm.conf.d/$(basename -- "$config_file")"
   done
-  sudo rm -rf -- /usr/local/share/sddm/themes/omarchy-plasma
-  sudo cp -a -- /usr/share/sddm/themes/omarchy /usr/local/share/sddm/themes/omarchy-plasma
-  sudo install -m 0644 "$repo_dir/system/sddm/Main.qml" /usr/local/share/sddm/themes/omarchy-plasma/Main.qml
-  sudo install -m 0644 "$repo_dir/system/sddm/metadata.desktop" /usr/local/share/sddm/themes/omarchy-plasma/metadata.desktop
+  sddm_target=/usr/local/share/sddm/themes/omarchy-plasma
+  assert_system_path_safe "$sddm_target"
+  sddm_staging=$(sudo mktemp -d --tmpdir=/usr/local/share/sddm/themes .plasmarchy-theme.XXXXXX)
+  sudo cp -a -- /usr/share/sddm/themes/omarchy/. "$sddm_staging/"
+  sudo install -m 0644 "$repo_dir/system/sddm/Main.qml" "$sddm_staging/Main.qml"
+  sudo install -m 0644 "$repo_dir/system/sddm/metadata.desktop" "$sddm_staging/metadata.desktop"
+  sudo sync -f "$sddm_staging"
+  assert_system_path_safe "$sddm_target"
+  sudo rm -rf -- "$sddm_target"
+  sudo mv -T -- "$sddm_staging" "$sddm_target"
+  sudo sync -f /usr/local/share/sddm/themes
   printf '%s\n' '[Theme]' 'ThemeDir=/usr/local/share/sddm/themes' 'Current=omarchy-plasma' | \
-    sudo tee /etc/sddm.conf.d/zz-omarchy-plasma-theme.conf >/dev/null
+    atomic_sudo_write /etc/sddm.conf.d/zz-omarchy-plasma-theme.conf 0644
   if sudo test -e /etc/sddm.conf.d/autologin.conf; then
-    sudo mv -- /etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf.disabled
+    assert_system_path_safe /etc/sddm.conf.d/autologin.conf
+    assert_system_path_safe /etc/sddm.conf.d/autologin.conf.disabled
+    sudo mv -T -- /etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf.disabled
   fi
-  printf '%s\n' 'with_sddm=true' > "$state_dir/system-install.env"
+  printf '%s\n' 'with_sddm=true' | atomic_write "$state_dir/system-install.env" 0600
 else
-  printf '%s\n' 'with_sddm=false' > "$state_dir/system-install.env"
+  printf '%s\n' 'with_sddm=false' | atomic_write "$state_dir/system-install.env" 0600
 fi
 
-ln -sfn -- "$backup_dir" "$state_dir/latest-backup"
-printf 'installed_at=%q\nbackup_dir=%q\n' "$stamp" "$backup_dir" > "$state_dir/install.env"
+if [[ -L $state_dir/latest-backup ]]; then
+  legacy_backup=$(readlink -f -- "$state_dir/latest-backup")
+  case "$legacy_backup" in
+    "$state_dir/backups/"*) rm -f -- "$state_dir/latest-backup" ;;
+    *) printf '%s\n' 'Refusing an unsafe legacy latest-backup symlink.' >&2; exit 1 ;;
+  esac
+fi
+printf '%s\n' "$backup_dir" | atomic_write "$state_dir/latest-backup" 0600
+printf 'installed_at=%q\nbackup_dir=%q\n' "$stamp" "$backup_dir" | \
+  atomic_write "$state_dir/install.env" 0600
 
 "$repo_dir/doctor.sh" || true
 

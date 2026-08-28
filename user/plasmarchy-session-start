@@ -12,4 +12,9 @@ done
 theme_hook="$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 [[ -x $theme_hook ]] && "$theme_hook" session-start
 
+# Keep Dolphin's native submenu aligned with coding agents installed since the
+# previous login. This only rewrites Plasmarchy's own service-menu entry.
+agent_menu_refresh="$HOME/.local/bin/plasmarchy-agent-menu-refresh"
+[[ -x $agent_menu_refresh ]] && "$agent_menu_refresh"
+
 exec qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"
