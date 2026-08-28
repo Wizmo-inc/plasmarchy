@@ -107,6 +107,7 @@ restore_or_remove "$HOME/.config/ksplashrc"
 restore_or_remove "$HOME/.config/kscreenlockerrc"
 restore_or_remove "$HOME/.config/plasmashellrc"
 restore_or_remove "$HOME/.config/kglobalshortcutsrc"
+restore_or_remove "$HOME/.config/powerdevilrc"
 restore_or_remove "$HOME/.config/mimeapps.list"
 restore_or_remove "$HOME/.config/kwinrc"
 restore_or_remove "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
@@ -132,6 +133,7 @@ done
 restore_or_remove "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 systemctl --user try-restart plasma-kglobalaccel.service >/dev/null 2>&1 || true
+systemctl --user try-restart plasma-powerdevil.service >/dev/null 2>&1 || true
 systemctl --user try-restart plasma-plasmashell.service >/dev/null 2>&1 || true
 
 assert_user_path_safe "$state_dir/system-install.env"

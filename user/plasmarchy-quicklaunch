@@ -27,7 +27,10 @@ def notify(message: str, *, error: bool = False) -> None:
 
 
 def normalized_id(value: str) -> str:
-    return value.removesuffix(".desktop").strip()
+    # Callers pass the canonical desktop-file ID without the filename's final
+    # suffix. Do not blindly strip ".desktop": reverse-DNS IDs are allowed to
+    # end with that word (for example app.featherplayer.desktop).
+    return value.strip()
 
 
 def task_entry(config: dict) -> dict:
@@ -66,6 +69,8 @@ def change_pin(action: str, app_id: str, label: str, icon: str) -> None:
     matches = lambda item: normalized_id(str(item.get("desktopId", ""))) == app_id
 
     if action == "pin":
+        if find_desktop_file(app_id) is None:
+            raise FileNotFoundError(f"Could not find a reusable launcher for {label}")
         if not any(matches(item) for item in launchers):
             launchers.append({
                 "title": label,

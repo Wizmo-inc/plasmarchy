@@ -164,6 +164,7 @@ backup "$HOME/.config/ksplashrc"
 backup "$HOME/.config/kscreenlockerrc"
 backup "$HOME/.config/plasmashellrc"
 backup "$HOME/.config/kglobalshortcutsrc"
+backup "$HOME/.config/powerdevilrc"
 backup "$HOME/.config/mimeapps.list"
 backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
@@ -271,6 +272,19 @@ for image_mime in image/png image/jpeg image/gif image/bmp image/webp image/tiff
 done
 kwriteconfig6 --file mimeapps.list --group 'Default Applications' \
   --key x-scheme-handler/plasmarchy org.plasmarchy.themes.desktop
+
+# Plasma owns the hardware power key in this hybrid session because logind is
+# configured to ignore it. Make a tap suspend immediately while retaining a
+# deliberate long press as the emergency power-down action.
+for power_profile in AC Battery LowBattery; do
+  kwriteconfig6 --file powerdevilrc --group "$power_profile" \
+    --group SuspendAndShutdown --key PowerButtonAction 1
+  kwriteconfig6 --file powerdevilrc --group "$power_profile" \
+    --group SuspendAndShutdown --key PowerDownAction 8
+  kwriteconfig6 --file powerdevilrc --group "$power_profile" \
+    --group SuspendAndShutdown --key SleepMode 1
+done
+systemctl --user try-restart plasma-powerdevil.service >/dev/null 2>&1 || true
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 
 rm -rf -- "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"

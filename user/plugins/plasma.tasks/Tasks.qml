@@ -18,6 +18,43 @@ BarWidget {
   property var tasks: []
   property string lastActivatedId: ""
   property var contextTask: null
+  property var contextLauncher: null
+
+  function normalizedDesktopId(value) {
+    return String(value || "").replace(/\.desktop$/, "").toLowerCase()
+  }
+
+  function taskForLauncher(launcher) {
+    var wanted = normalizedDesktopId(launcher ? launcher.desktopId : "")
+    if (!wanted) return null
+    for (var i = 0; i < tasks.length; ++i) {
+      if (normalizedDesktopId(tasks[i].desktopId) === wanted) return tasks[i]
+    }
+    return null
+  }
+
+  function launcherForTask(task) {
+    var wanted = normalizedDesktopId(task ? task.desktopId : "")
+    if (!wanted) return null
+    for (var i = 0; i < launchers.length; ++i) {
+      if (normalizedDesktopId(launchers[i].desktopId) === wanted) return launchers[i]
+    }
+    return null
+  }
+
+  function unpinnedTasks() {
+    var represented = {}
+    var remaining = []
+    for (var i = 0; i < tasks.length; ++i) {
+      var id = normalizedDesktopId(tasks[i].desktopId)
+      if (id && launcherForTask(tasks[i]) && !represented[id]) {
+        represented[id] = true
+      } else {
+        remaining.push(tasks[i])
+      }
+    }
+    return remaining
+  }
 
   function refresh() {
     if (!taskQuery.running) taskQuery.running = true
@@ -39,7 +76,9 @@ BarWidget {
         id: fields[0],
         title: fields[1] || "Window",
         icon: fields[2] || "application-x-executable",
-        minimized: fields[3] === "true"
+        minimized: fields[3] === "true",
+        desktopId: fields[4] || "",
+        appName: fields[5] || ""
       })
     }
     tasks = next
@@ -77,6 +116,22 @@ BarWidget {
       "org.kde.krunner1.Run", task.id, ""
     ])
     closeDelay.restart()
+  }
+
+  function requestPin(task) {
+    if (!task || !task.desktopId) return
+    Quickshell.execDetached([
+      Quickshell.env("HOME") + "/.local/bin/plasmarchy-quicklaunch",
+      "pin", task.desktopId, task.appName || task.title, task.icon
+    ])
+  }
+
+  function requestUnpin(launcher) {
+    if (!launcher || !launcher.desktopId) return
+    Quickshell.execDetached([
+      Quickshell.env("HOME") + "/.local/bin/plasmarchy-quicklaunch",
+      "unpin", launcher.desktopId, launcher.title || "Application", launcher.icon || ""
+    ])
   }
 
   Process {
@@ -119,7 +174,7 @@ BarWidget {
 
   QQC.Menu {
     id: taskMenu
-    width: Style.space(120)
+    width: Style.space(190)
     popupType: QQC.Popup.Window
     modal: false
     closePolicy: QQC.Popup.CloseOnEscape
@@ -134,9 +189,53 @@ BarWidget {
     }
 
     QQC.MenuItem {
+      id: pinAction
+      visible: root.contextTask !== null
+               && root.contextLauncher === null
+               && Boolean(root.contextTask.desktopId)
+               && root.launcherForTask(root.contextTask) === null
+      height: visible ? Style.space(38) : 0
+      text: "Pin to Plasmarchy bar"
+      onTriggered: root.requestPin(root.contextTask)
+      contentItem: Text {
+        text: pinAction.text
+        color: pinAction.highlighted ? Color.menu.selectedText : Color.menu.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.body
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+      }
+      background: Rectangle {
+        color: pinAction.highlighted ? Color.menu.selectedBackground : "transparent"
+        radius: Style.cornerRadius
+      }
+    }
+
+    QQC.MenuItem {
+      id: unpinAction
+      visible: root.contextLauncher !== null
+      height: visible ? Style.space(38) : 0
+      text: "Unpin from Plasmarchy bar"
+      onTriggered: root.requestUnpin(root.contextLauncher)
+      contentItem: Text {
+        text: unpinAction.text
+        color: unpinAction.highlighted ? Color.menu.selectedText : Color.menu.text
+        font.family: Style.font.family
+        font.pixelSize: Style.font.body
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+      }
+      background: Rectangle {
+        color: unpinAction.highlighted ? Color.menu.selectedBackground : "transparent"
+        radius: Style.cornerRadius
+      }
+    }
+
+    QQC.MenuItem {
       id: closeAction
+      visible: root.contextTask !== null
+      height: visible ? Style.space(38) : 0
       text: "Close window"
-      height: Style.space(38)
       onTriggered: root.requestCloseTask(root.contextTask)
       contentItem: Text {
         text: closeAction.text
@@ -168,6 +267,7 @@ BarWidget {
       delegate: Item {
         id: launcher
         required property var modelData
+        readonly property var matchingTask: root.taskForLauncher(modelData)
 
         width: root.barSize
         height: root.barSize
@@ -196,16 +296,50 @@ BarWidget {
           }
         }
 
+        Rectangle {
+          visible: launcher.matchingTask !== null
+          anchors.horizontalCenter: parent.horizontalCenter
+          anchors.bottom: parent.bottom
+          anchors.bottomMargin: 1
+          width: launcher.matchingTask && launcher.matchingTask.minimized ? Style.space(5) : Style.space(12)
+          height: 2
+          radius: 1
+          color: root.bar ? root.bar.urgent : Color.accent
+          opacity: launcher.matchingTask && launcher.matchingTask.minimized ? 0.45 : 1
+        }
+
         MouseArea {
           id: launcherMouse
           anchors.fill: parent
-          acceptedButtons: Qt.LeftButton
+          acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
 
-          onClicked: root.launchApp(launcher.modelData)
+          onClicked: function(event) {
+            if (event.button === Qt.RightButton) {
+              if (root.bar) root.bar.hideTooltip(launcher)
+              root.contextLauncher = launcher.modelData
+              root.contextTask = launcher.matchingTask
+              taskMenu.popup(
+                launcher,
+                Math.round((launcher.width - taskMenu.width) / 2),
+                -taskMenu.implicitHeight - Style.space(6)
+              )
+            } else if (event.button === Qt.MiddleButton && launcher.matchingTask) {
+              root.requestCloseTask(launcher.matchingTask)
+            } else if (launcher.matchingTask) {
+              root.activateTask(launcher.matchingTask)
+            } else {
+              root.launchApp(launcher.modelData)
+            }
+          }
           onEntered: if (root.bar)
-            root.bar.showTooltip(launcher, "Launch " + (launcher.modelData.title || "application"))
+            root.bar.showTooltip(
+              launcher,
+              launcher.matchingTask
+                ? launcher.modelData.title + (launcher.matchingTask.minimized ? " · minimized" : " · open")
+                : "Launch " + (launcher.modelData.title || "application")
+            )
           onExited: if (root.bar) root.bar.hideTooltip(launcher)
         }
       }
@@ -222,7 +356,7 @@ BarWidget {
     }
 
     Repeater {
-      model: root.tasks
+      model: root.unpinnedTasks()
 
       delegate: Item {
         id: task
@@ -278,6 +412,7 @@ BarWidget {
             if (event.button === Qt.RightButton) {
               if (root.bar) root.bar.hideTooltip(task)
               root.contextTask = task.modelData
+              root.contextLauncher = null
               taskMenu.popup(
                 task,
                 Math.round((task.width - taskMenu.width) / 2),

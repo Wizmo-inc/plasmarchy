@@ -13,8 +13,10 @@ Published by **cobraxai**.
 ## Features
 
 - Bottom Omarchy Quickshell bar in a Plasma session
-- Theme-aware quick launchers for Files, Terminal, and Chrome before open windows
+- Theme-aware quick launchers that merge with their running window tasks
 - Right-click app actions to pin or unpin Quick Launch icons and add desktop shortcuts
+- Right-click any open window to pin it directly to the Plasmarchy bar
+- Desktop-entry, executable, project-artwork, and generated-monogram icon fallbacks for custom apps
 - Dolphin **Open with Agent** folder submenu generated from installed coding agents
 - KWin-aware window task buttons with click-to-minimize behavior
 - Right-click Close menu for every running application or folder task
@@ -35,6 +37,7 @@ Published by **cobraxai**.
 - Omarchy notification popups enabled for screenshot and system feedback
 - Omarchy-style drag-to-select screen recording from the Capture menu
 - Login-time and live background synchronization with the active Omarchy theme
+- Quick power-button tap suspends directly; a deliberate long press powers down
 
 Unlike Omarchy's upstream top-bar layout, Plasmarchy intentionally installs
 its primary bar at the bottom by default.
@@ -103,6 +106,11 @@ Open the application launcher in the bottom-left corner, then right-click any
 app. Choose **Pin to Quick Launch** or **Add to Desktop**. A pinned app can be
 removed from the same menu with **Unpin from Quick Launch**. Changes hot-reload;
 no logout or restart is required.
+
+You can also right-click any running app on the bar and choose **Pin to
+Plasmarchy bar**. Its running task merges into the pinned icon: click it to
+restore or minimize, right-click it to close or unpin, and use the same icon to
+launch the app again after it has closed.
 
 Advanced users can still edit the `launchers` array on the `plasma.tasks`
 entry in `~/.config/omarchy/plasma-shell.json`.

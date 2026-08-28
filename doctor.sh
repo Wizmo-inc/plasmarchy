@@ -115,6 +115,20 @@ else
   printf '%s\n' 'note Plasma startup splash is enabled'
 fi
 
+power_button_ok=true
+for power_profile in AC Battery LowBattery; do
+  if [[ $(kreadconfig6 --file powerdevilrc --group "$power_profile" \
+          --group SuspendAndShutdown --key PowerButtonAction 2>/dev/null) != 1 ]]; then
+    power_button_ok=false
+  fi
+done
+if $power_button_ok; then
+  printf '%s\n' 'ok   hardware power-button tap suspends through Plasma'
+else
+  printf '%s\n' 'FAIL hardware power-button tap is not configured to suspend'
+  failures=$((failures + 1))
+fi
+
 if command -v jq >/dev/null 2>&1 && ! jq -e . "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1; then
   printf '%s\n' 'FAIL plasma-shell.json is invalid JSON'
   failures=$((failures + 1))
@@ -141,6 +155,20 @@ if jq -e '.plugins[] | select(.id == "plasma.menu")' \
   printf '%s\n' 'ok   graphical app actions are installed'
 else
   printf '%s\n' 'FAIL graphical app actions are missing'
+  failures=$((failures + 1))
+fi
+
+if rg -q 'Pin to Plasmarchy bar' "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   running windows can be pinned directly from the taskbar'
+else
+  printf '%s\n' 'FAIL taskbar pin action is missing'
+  failures=$((failures + 1))
+fi
+
+if rg -q 'fallback_icon_for_app' "$HOME/.config/omarchy/plugins/plasma.tasks/tasks.sh" 2>/dev/null; then
+  printf '%s\n' 'ok   custom apps have project-artwork and monogram icon fallbacks'
+else
+  printf '%s\n' 'FAIL custom-app icon fallback is missing'
   failures=$((failures + 1))
 fi
 
