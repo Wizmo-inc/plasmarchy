@@ -20,13 +20,14 @@ check_file() {
   fi
 }
 
-for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy slurp gpu-screen-recorder kscreen-doctor plasmashell dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
+for command_name in omarchy qs qdbus6 busctl jq perl python kwriteconfig6 kreadconfig6 kbuildsycoca6 kiconfinder6 localectl spectacle wl-copy slurp gpu-screen-recorder kscreen-doctor plasmashell dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
   check_command "$command_name"
 done
 check_file /usr/share/omarchy/shell/shell.qml
 check_file "$HOME/.config/omarchy/plasma-shell.json"
 check_file "$HOME/.config/quickshell/plasma-omarchy/shell.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
+check_file "$HOME/.config/omarchy/plugins/plasma.keyboard-layout/KeyboardLayout.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.show-desktop/ShowDesktop.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml"
 check_file "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop/contents/code/main.js"
@@ -41,6 +42,10 @@ check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/
 check_file "$HOME/.local/bin/omarchy-capture-screenshot"
 check_file "$HOME/.local/bin/omarchy-capture-region"
 check_file "$HOME/.local/bin/omarchy-capture-screenrecording"
+check_file "$HOME/.local/bin/omarchy-system-reboot"
+check_file "$HOME/.local/bin/codex-resume-all"
+check_file "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.service"
+check_file "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.timer"
 check_file "$HOME/.local/bin/plasmarchy-session-start"
 check_file "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
@@ -78,11 +83,21 @@ fi
 lock_ui=$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml
 if rg -q 'Qt.Key_Return.*Qt.Key_Enter' "$lock_ui" 2>/dev/null &&
    rg -q 'authenticator\.promptForSecret' "$lock_ui" 2>/dev/null &&
-   rg -q 'pendingPassword' "$lock_ui" 2>/dev/null; then
-  printf '%s\n' 'ok   idle lock supports Enter and stale-authentication recovery'
+   rg -q 'pendingPassword' "$lock_ui" 2>/dev/null &&
+   rg -q 'KeyboardLayoutSwitcher' "$lock_ui" 2>/dev/null; then
+  printf '%s\n' 'ok   idle lock supports reliable authentication and keyboard-layout switching'
 else
-  printf '%s\n' 'FAIL idle lock is missing reliable password submission handling'
+  printf '%s\n' 'FAIL idle lock is missing reliable authentication or keyboard-layout switching'
   failures=$((failures + 1))
+fi
+
+sddm_ui=/usr/local/share/sddm/themes/omarchy-plasma/Main.qml
+if [[ -f $sddm_ui ]] &&
+   rg -q 'keyboard\.currentLayout' "$sddm_ui" 2>/dev/null &&
+   rg -q 'hasMultipleKeyboardLayouts' "$sddm_ui" 2>/dev/null; then
+  printf '%s\n' 'ok   Omarchy-style SDDM login supports keyboard-layout switching'
+else
+  printf '%s\n' 'warn Omarchy-style SDDM login layout switcher is not installed'
 fi
 
 if qdbus6 org.kde.kglobalaccel /kglobalaccel >/dev/null 2>&1; then
@@ -108,6 +123,14 @@ if rg -q 'refreshCurrentShell' "$HOME/.config/omarchy/hooks/theme-set.d" 2>/dev/
   failures=$((failures + 1))
 fi
 
+if [[ $(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null) == Omarchy-Plasma ]] &&
+   [[ $(kiconfinder6 keyboard-layout 2>/dev/null) == *keyboard-layout* ]]; then
+  printf '%s\n' 'ok   Plasma-specific icons fall back cleanly from the Omarchy icon theme'
+else
+  printf '%s\n' 'FAIL Plasma-specific icon fallback is not configured'
+  failures=$((failures + 1))
+fi
+
 if [[ $(kreadconfig6 --file ksplashrc --group KSplash --key Theme 2>/dev/null) == None ]] &&
    [[ $(kreadconfig6 --file ksplashrc --group KSplash --key Engine 2>/dev/null) == none ]]; then
   printf '%s\n' 'ok   Plasma startup splash is disabled'
@@ -129,6 +152,31 @@ else
   failures=$((failures + 1))
 fi
 
+if [[ $(kreadconfig6 --file ksmserverrc --group General --key loginMode 2>/dev/null) == restorePreviousLogout ]] &&
+   rg -q 'org\.kde\.Shutdown\.logoutAndReboot' "$HOME/.local/bin/omarchy-system-reboot" 2>/dev/null; then
+  printf '%s\n' 'ok   orderly reboot saves and restores the previous Plasma session'
+else
+  printf '%s\n' 'FAIL previous Plasma session restoration is not configured'
+  failures=$((failures + 1))
+fi
+
+if [[ -x $HOME/.local/bin/codex-resume-all ]] &&
+   rg -q 'codex resume --all' "$HOME/.local/bin/codex-resume-all" 2>/dev/null; then
+  printf '%s\n' 'ok   global Codex resume picker is installed'
+else
+  printf '%s\n' 'FAIL global Codex resume picker is missing'
+  failures=$((failures + 1))
+fi
+
+if systemctl --user is-enabled plasmarchy-session-checkpoint.timer >/dev/null 2>&1 &&
+   systemctl --user is-active plasmarchy-session-checkpoint.timer >/dev/null 2>&1 &&
+   [[ -s $HOME/.local/state/plasmasessionrestorestaterc ]]; then
+  printf '%s\n' 'ok   low-overhead crash-recovery checkpoint timer is active'
+else
+  printf '%s\n' 'FAIL crash-recovery session checkpoint is inactive or empty'
+  failures=$((failures + 1))
+fi
+
 if command -v jq >/dev/null 2>&1 && ! jq -e . "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1; then
   printf '%s\n' 'FAIL plasma-shell.json is invalid JSON'
   failures=$((failures + 1))
@@ -139,6 +187,31 @@ if [[ $(jq -r '.bar.position // empty' "$HOME/.config/omarchy/plasma-shell.json"
 else
   printf '%s\n' 'FAIL Plasmarchy bar is not positioned at the bottom'
   failures=$((failures + 1))
+fi
+
+if jq -e '.bar.layout.center[] | select(.id == "plasma.keyboard-layout")' \
+  "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1 &&
+  rg -q 'org\.kde\.plasma\.workspace\.keyboardlayout' \
+    "$HOME/.config/omarchy/plugins/plasma.keyboard-layout/KeyboardLayout.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   Plasma keyboard layout switcher is available on the bar'
+else
+  printf '%s\n' 'FAIL Plasma keyboard layout switcher is missing from the bar'
+  failures=$((failures + 1))
+fi
+
+layout_count=$(qdbus6 --literal org.kde.keyboard /Layouts getLayoutsList 2>/dev/null |
+  rg -o '\[Argument: \(sss\)' | wc -l)
+if ((layout_count > 1)); then
+  printf 'ok   Plasma currently exposes %d keyboard layouts\n' "$layout_count"
+  system_layouts=$(localectl status 2>/dev/null |
+    sed -n 's/^[[:space:]]*X11 Layout: //p')
+  if [[ $system_layouts == *,* ]]; then
+    printf 'ok   system XKB layouts (%s) persist across Plasma logins\n' "$system_layouts"
+  else
+    printf '%s\n' 'warn multiple layouts are not in the system XKB setting and may reset at login'
+  fi
+else
+  printf '%s\n' 'warn Plasma currently exposes one keyboard layout; the bar switcher stays hidden'
 fi
 
 if jq -e '.bar.layout.left[] | select(.id == "plasma.tasks") | .launchers | length > 0' \

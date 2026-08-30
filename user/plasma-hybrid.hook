@@ -102,10 +102,10 @@ icon_theme_exists() {
   return 1
 }
 
+mode=$(omarchy-theme-color --file "$colors_file" mode 2>/dev/null || true)
 if ! icon_theme_exists "$icon_theme"; then
   # Current Omarchy White/Vantablack metadata uses gray/grey names that the
   # Arch Yaru package does not ship. Preserve light/dark intent in that case.
-  mode=$(omarchy-theme-color --file "$colors_file" mode 2>/dev/null || true)
   if [[ $mode == "light" ]] && icon_theme_exists Yaru; then
     icon_theme="Yaru"
   elif icon_theme_exists Yaru-dark; then
@@ -115,7 +115,38 @@ if ! icon_theme_exists "$icon_theme"; then
   fi
 fi
 
-kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "$icon_theme"
+# Yaru intentionally does not inherit KDE's Breeze theme, so Plasma-only names
+# such as `keyboard-layout` otherwise resolve as a generic file. Keep the
+# Omarchy-selected family first and fall back to the matching Breeze variant
+# only for icons it does not provide.
+plasma_icon_theme="Omarchy-Plasma"
+plasma_icon_dir="$HOME/.local/share/icons/$plasma_icon_theme"
+if [[ $mode == "light" ]] && icon_theme_exists breeze; then
+  plasma_icon_fallback="breeze"
+else
+  plasma_icon_fallback="breeze-dark"
+fi
+mkdir -p "$plasma_icon_dir/scalable/status"
+plasma_icon_index="$plasma_icon_dir/index.theme"
+plasma_icon_tmp="$plasma_icon_index.tmp.$$"
+cat >"$plasma_icon_tmp" <<EOF
+[Icon Theme]
+Name=Omarchy Plasma
+Comment=Omarchy icons with Plasma-specific fallbacks
+Hidden=true
+Inherits=$icon_theme,$plasma_icon_fallback,hicolor
+Directories=scalable/status
+
+[scalable/status]
+Context=Status
+Size=16
+MinSize=8
+MaxSize=512
+Type=Scalable
+EOF
+mv "$plasma_icon_tmp" "$plasma_icon_index"
+
+kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "$plasma_icon_theme"
 
 current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null || true)
 if [[ -f $current_background ]]; then

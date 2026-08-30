@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Codex's normal resume picker is scoped to the current working directory.
+# This helper deliberately opens the global interactive-session picker while
+# continuing to hide internal/non-interactive sessions unless requested.
+exec codex resume --all "$@"

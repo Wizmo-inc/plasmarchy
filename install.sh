@@ -122,7 +122,7 @@ require() {
   command -v "$1" >/dev/null 2>&1 || { printf 'Missing dependency: %s\n' "$1" >&2; exit 1; }
 }
 
-for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 spectacle wl-copy slurp gpu-screen-recorder kscreen-doctor plasma-apply-colorscheme dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
+for command_name in qs qdbus6 busctl systemctl jq perl patch python kwriteconfig6 kreadconfig6 kbuildsycoca6 kiconfinder6 spectacle wl-copy slurp gpu-screen-recorder kscreen-doctor plasma-apply-colorscheme dolphin gwenview omarchy-launch-terminal omarchy-launch-browser; do
   require "$command_name"
 done
 
@@ -136,6 +136,10 @@ done
 }
 [[ -d $omarchy_root/shell/plugins/menu ]] || {
   printf 'The installed Omarchy version does not provide the application menu plugin.\n' >&2
+  exit 1
+}
+[[ -x /usr/lib/plasma-fallback-session-save ]] || {
+  printf '%s\n' 'This Plasma installation does not provide its fallback session saver.' >&2
   exit 1
 }
 jq -e '.bar.position == "bottom"' "$repo_dir/user/plasma-shell.json" >/dev/null || {
@@ -160,11 +164,14 @@ backup() {
 backup "$HOME/.config/omarchy/plasma-shell.json"
 backup "$HOME/.config/quickshell/plasma-omarchy"
 backup "$HOME/.config/autostart/plasma-omarchy-bar.desktop"
+backup "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.service"
+backup "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.timer"
 backup "$HOME/.config/ksplashrc"
 backup "$HOME/.config/kscreenlockerrc"
 backup "$HOME/.config/plasmashellrc"
 backup "$HOME/.config/kglobalshortcutsrc"
 backup "$HOME/.config/powerdevilrc"
+backup "$HOME/.config/ksmserverrc"
 backup "$HOME/.config/mimeapps.list"
 backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
@@ -172,6 +179,8 @@ backup "$HOME/.local/bin/omarchy-shell"
 backup "$HOME/.local/bin/omarchy-capture-screenshot"
 backup "$HOME/.local/bin/omarchy-capture-region"
 backup "$HOME/.local/bin/omarchy-capture-screenrecording"
+backup "$HOME/.local/bin/omarchy-system-reboot"
+backup "$HOME/.local/bin/codex-resume-all"
 backup "$HOME/.local/bin/plasmarchy-session-start"
 backup "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 backup "$HOME/.local/bin/plasmarchy-quicklaunch"
@@ -181,11 +190,12 @@ backup "$HOME/.local/bin/plasmarchy-themes-handler"
 backup "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 backup "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
+backup "$HOME/.local/share/icons/Omarchy-Plasma"
 backup "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder"
 backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 backup "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop plasma.agents plasma.menu omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop plasma.agents plasma.menu omatask; do
   backup "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 
@@ -194,6 +204,7 @@ mkdir -p \
   "$HOME/.config/omarchy/hooks/theme-set.d" \
   "$HOME/.config/quickshell/plasma-omarchy" \
   "$HOME/.config/autostart" \
+  "$HOME/.config/systemd/user" \
   "$HOME/.local/bin" \
   "$HOME/.local/share/applications" \
   "$HOME/.local/share/kio/servicemenus" \
@@ -202,7 +213,7 @@ mkdir -p \
   "$HOME/.local/share/kwin/scripts"
 
 install -m 0644 "$repo_dir/user/plasma-shell.json" "$HOME/.config/omarchy/plasma-shell.json"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.show-desktop omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop omatask; do
   rm -rf -- "$HOME/.config/omarchy/plugins/$plugin_id"
   cp -a -- "$repo_dir/user/plugins/$plugin_id" "$HOME/.config/omarchy/plugins/$plugin_id"
 done
@@ -235,6 +246,12 @@ install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/omarchy-capture-region" "$HOME/.local/bin/omarchy-capture-region"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenrecording" "$HOME/.local/bin/omarchy-capture-screenrecording"
+install -m 0755 "$repo_dir/user/omarchy-system-reboot" "$HOME/.local/bin/omarchy-system-reboot"
+install -m 0755 "$repo_dir/user/codex-resume-all" "$HOME/.local/bin/codex-resume-all"
+install -m 0644 "$repo_dir/user/systemd/plasmarchy-session-checkpoint.service" \
+  "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.service"
+install -m 0644 "$repo_dir/user/systemd/plasmarchy-session-checkpoint.timer" \
+  "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.timer"
 install -m 0755 "$repo_dir/user/plasmarchy-session-start" "$HOME/.local/bin/plasmarchy-session-start"
 install -m 0755 "$repo_dir/user/plasmarchy-sync-wallpaper" "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 install -m 0755 "$repo_dir/user/plasmarchy-quicklaunch" "$HOME/.local/bin/plasmarchy-quicklaunch"
@@ -242,6 +259,7 @@ install -m 0755 "$repo_dir/user/plasmarchy-open-agent" "$HOME/.local/bin/plasmar
 install -m 0755 "$repo_dir/user/plasmarchy-agent-menu-refresh" "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 install -m 0755 "$repo_dir/user/plasmarchy-themes-handler" "$HOME/.local/bin/plasmarchy-themes-handler"
 install -m 0755 "$repo_dir/user/plasma-hybrid.hook" "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
+"$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook" install
 install -m 0644 "$repo_dir/user/org.plasmarchy.themes.desktop" \
   "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
 "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
@@ -286,6 +304,17 @@ for power_profile in AC Battery LowBattery; do
 done
 systemctl --user try-restart plasma-powerdevil.service >/dev/null 2>&1 || true
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+
+# Restore supported applications and their windows after the next login.
+# Plasmarchy's reboot wrapper below enters Plasma's orderly logout path so the
+# "previous logout" snapshot is actually written before power cycling.
+kwriteconfig6 --file ksmserverrc --group General \
+  --key loginMode restorePreviousLogout --notify
+systemctl --user daemon-reload
+systemctl --user enable --now plasmarchy-session-checkpoint.timer
+# Seed the on-disk recovery list immediately instead of waiting for the first
+# timer interval. The saver exits after writing a tiny application-ID file.
+systemctl --user start plasmarchy-session-checkpoint.service
 
 rm -rf -- "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 cp -a -- "$repo_dir/user/kwin/scripts/plasmarchy-show-desktop" \

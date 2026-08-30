@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Omarchy's packaged reboot command asks systemd to reboot directly. In a
+# Plasma session that skips KSMServer's orderly logout, so the last desktop
+# session is never saved. Route the same menu action through Plasma's native
+# shutdown service and retain Omarchy's implementation everywhere else.
+if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]] &&
+   command -v qdbus6 >/dev/null 2>&1 &&
+   qdbus6 org.kde.Shutdown /Shutdown >/dev/null 2>&1; then
+  qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.saveSession >/dev/null
+  exec qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logoutAndReboot
+fi
+
+exec /usr/bin/omarchy-system-reboot "$@"

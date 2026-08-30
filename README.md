@@ -23,6 +23,8 @@ Published by **cobraxai**.
 - Show Desktop minimize/restore toggle that keeps the bottom bar visible
 - Distinct window-minimize glyph for Show Desktop instead of a display icon
 - Plasma virtual desktop switcher and KRunner shortcut
+- Plasma-native keyboard layout indicator with click and scroll switching
+- Safe keyboard layout buttons on the optional SDDM login and idle lock screens
 - Desktop right-click shortcut to the Omarchy theme chooser
 - Omarchy application and agent menus
 - Omarchy Agents usage panel and the `omatask` system monitor
@@ -38,6 +40,9 @@ Published by **cobraxai**.
 - Omarchy-style drag-to-select screen recording from the Capture menu
 - Login-time and live background synchronization with the active Omarchy theme
 - Quick power-button tap suspends directly; a deliberate long press powers down
+- Orderly Plasma reboot with previous applications and windows restored at login
+- Global `codex-resume-all` picker for saved Codex sessions from every project
+- Five-minute, one-shot application checkpoints for crash and power-loss recovery
 
 Unlike Omarchy's upstream top-bar layout, Plasmarchy intentionally installs
 its primary bar at the bottom by default.
@@ -114,6 +119,51 @@ launch the app again after it has closed.
 
 Advanced users can still edit the `launchers` array on the `plasma.tasks`
 entry in `~/.config/omarchy/plasma-shell.json`.
+
+### Switch keyboard layouts
+
+Open Plasma's keyboard configuration with `kcmshell6 kcm_keyboard`, enable
+**Configure layouts**, and add at least two layouts. The current layout then
+appears beside the clock in the Plasmarchy bar. Left-click switches to the next
+layout, right-click switches to the previous one, and the mouse wheel switches
+in either direction. The widget stays hidden when only one layout is configured.
+
+Omarchy launches Plasma with the system keyboard configuration at each login.
+To make US and Russian persist across restarts while keeping the virtual console
+and disk-unlock keymap on US, configure only the graphical XKB setting:
+
+```bash
+sudo localectl --no-convert set-x11-keymap us,ru pc105 , grp:alt_shift_toggle
+```
+
+When the optional Omarchy-style SDDM theme is installed, both the login screen
+and idle lock screen show a `LANG EN` / `LANG RU` button. Clicking it clears any
+partly entered password before switching. `Ctrl+Space` provides the same safe
+switch from the password field.
+
+### Continue after a reboot
+
+Plasmarchy routes the Omarchy menu's **Reboot** action through Plasma's native
+session shutdown and enables **Restore previous logout session**. Plasma saves
+supported applications and windows during the orderly logout and relaunches
+them after the next login. Applications remain responsible for restoring their
+own document, tab, and in-app state, so unsaved work should still be saved
+before rebooting.
+
+Codex sessions are persisted independently under Codex's user data directory.
+The normal resume picker can be limited to the current folder; run
+`codex-resume-all` from any terminal to see saved interactive sessions from all
+project directories. Pass `--include-non-interactive` only when you also want
+internal or automated sessions shown.
+
+For an unexpected power loss, a systemd user timer refreshes Plasma's compact
+fallback application list every five minutes. It runs the native saver briefly
+and exits—there is no resident Plasmarchy recovery process consuming RAM. At
+the next login Plasma can relaunch the most recently checkpointed applications;
+apps such as browsers and Codex then use their own continuously persisted data
+to recover tabs and conversations. The last few minutes of newly opened or
+closed apps may be absent after a sudden outage, and unsaved editor buffers are
+only recoverable when that editor has its own autosave support.
 
 ### Open a folder with an agent
 

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "plasma.keyboard-layout",
+  "name": "Plasma Keyboard Layout",
+  "version": "1.0.0",
+  "author": "Wizmo-inc contributors",
+  "license": "MIT",
+  "description": "Shows KWin's current keyboard layout and cycles layouts from the Plasmarchy bar.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "KeyboardLayout.qml"
+  },
+  "barWidget": {
+    "displayName": "Keyboard Layout",
+    "description": "Shows the current Plasma keyboard layout; click or scroll to switch.",
+    "category": "Compositor",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}

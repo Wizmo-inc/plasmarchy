@@ -60,6 +60,9 @@
           "verticalFormat": "HH\n—\nmm"
         },
         {
+          "id": "plasma.keyboard-layout"
+        },
+        {
           "id": "omarchy.weather"
         },
         {

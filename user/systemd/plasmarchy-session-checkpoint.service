@@ -1,0 +1,7 @@
+[Unit]
+Description=Checkpoint open Plasma applications for crash recovery
+ConditionEnvironment=XDG_CURRENT_DESKTOP=KDE
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/plasma-fallback-session-save

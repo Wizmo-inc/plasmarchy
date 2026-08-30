@@ -17,6 +17,28 @@ Rectangle {
     }
     return sessionModel.lastIndex
   }
+  readonly property bool hasMultipleKeyboardLayouts: keyboard.layouts.length > 1
+  readonly property var currentKeyboardLayout: keyboard.layouts.length > 0
+    ? keyboard.layouts[keyboard.currentLayout]
+    : null
+
+  function keyboardLayoutLabel(layout) {
+    if (!layout)
+      return ""
+
+    var shortName = String(layout.shortName || "").trim().toLowerCase()
+    return shortName === "us" ? "EN" : shortName.slice(0, 3).toUpperCase()
+  }
+
+  function switchKeyboardLayout() {
+    if (!root.hasMultipleKeyboardLayouts)
+      return
+
+    // Never leave a partly typed password behind when the keymap changes.
+    password.text = ""
+    keyboard.currentLayout = (keyboard.currentLayout + 1) % keyboard.layouts.length
+    password.forceActiveFocus()
+  }
 
   Connections {
     target: sddm
@@ -101,13 +123,47 @@ Rectangle {
 
           onTextChanged: root.loginFailed = false
 
-          Keys.onPressed: {
+          Keys.onPressed: function(event) {
+            if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Space) {
+              root.switchKeyboardLayout()
+              event.accepted = true
+              return
+            }
             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
               sddm.login(root.currentUser, password.text, root.sessionIndex)
               event.accepted = true
             }
           }
         }
+      }
+    }
+
+    Rectangle {
+      width: keyboardLayoutText.implicitWidth + 28
+      height: 30
+      radius: 5
+      anchors.horizontalCenter: parent.horizontalCenter
+      visible: root.hasMultipleKeyboardLayouts
+      color: keyboardLayoutMouse.containsMouse ? "#25283a" : "transparent"
+      border.width: 1
+      border.color: keyboardLayoutMouse.containsMouse ? "#a9b1d6" : "#565f89"
+
+      Text {
+        id: keyboardLayoutText
+        anchors.centerIn: parent
+        text: "LANG  " + root.keyboardLayoutLabel(root.currentKeyboardLayout)
+        color: "#c0caf5"
+        font.family: "JetBrainsMono Nerd Font"
+        font.pixelSize: 13
+        font.bold: true
+      }
+
+      MouseArea {
+        id: keyboardLayoutMouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.switchKeyboardLayout()
       }
     }
 

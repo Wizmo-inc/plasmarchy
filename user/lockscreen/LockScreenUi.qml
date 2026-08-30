@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 import org.kde.kirigami as Kirigami
 import org.kde.kscreenlocker as ScreenLocker
+import org.kde.plasma.workspace.components as PW
 
 Item {
     id: lockScreenUi
@@ -19,6 +20,21 @@ Item {
     function clearPassword() {
         password.text = ""
         password.forceActiveFocus()
+    }
+
+    function keyboardLayoutLabel(layout) {
+        if (!layout) return ""
+
+        const shortName = String(layout.shortName || "").trim().toLowerCase()
+        return shortName === "us" ? "EN" : shortName.slice(0, 3).toUpperCase()
+    }
+
+    function switchKeyboardLayout() {
+        if (!keyboardLayoutSwitcher.hasMultipleKeyboardLayouts) return
+
+        // Changing keymaps mid-entry produces an impossible mixed password.
+        clearPassword()
+        keyboardLayoutSwitcher.keyboardLayout.switchToNextLayout()
     }
 
     function submitPassword() {
@@ -102,6 +118,12 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: Kirigami.Theme.backgroundColor
+    }
+
+    PW.KeyboardLayoutSwitcher {
+        id: keyboardLayoutSwitcher
+        width: 0
+        height: 0
     }
 
     Column {
@@ -194,6 +216,11 @@ Item {
                         }
                     }
                     Keys.onPressed: event => {
+                        if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Space) {
+                            event.accepted = true
+                            lockScreenUi.switchKeyboardLayout()
+                            return
+                        }
                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             event.accepted = true
                             lockScreenUi.submitPassword()
@@ -231,6 +258,41 @@ Item {
                         onClicked: lockScreenUi.submitPassword()
                     }
                 }
+            }
+        }
+
+        Rectangle {
+            width: keyboardLayoutText.implicitWidth + 28
+            height: 30
+            radius: 5
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: keyboardLayoutSwitcher.hasMultipleKeyboardLayouts
+            color: keyboardLayoutMouse.containsMouse
+                ? Kirigami.Theme.alternateBackgroundColor
+                : "transparent"
+            border.width: 1
+            border.color: keyboardLayoutMouse.containsMouse
+                ? Kirigami.Theme.highlightColor
+                : Kirigami.Theme.disabledTextColor
+
+            Text {
+                id: keyboardLayoutText
+                anchors.centerIn: parent
+                text: "LANG  " + lockScreenUi.keyboardLayoutLabel(
+                    keyboardLayoutSwitcher.layoutNames
+                )
+                color: Kirigami.Theme.textColor
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 13
+                font.bold: true
+            }
+
+            MouseArea {
+                id: keyboardLayoutMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: lockScreenUi.switchKeyboardLayout()
             }
         }
 
