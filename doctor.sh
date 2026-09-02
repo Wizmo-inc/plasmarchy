@@ -44,10 +44,11 @@ else
   printf '%s\n' 'FAIL Agents right-click agent chooser route is missing'
   failures=$((failures + 1))
 fi
-if rg -q '\$HOME/\.local/bin/omarchy-shell' "$HOME/.local/bin/plasmarchy-themes-handler" 2>/dev/null; then
-  printf '%s\n' 'ok   Themes handler uses the Plasma-aware shell wrapper'
+if rg -q '\$HOME/\.local/bin/omarchy-shell" shell summon plasma\.menu' \
+  "$HOME/.local/bin/plasmarchy-themes-handler" 2>/dev/null; then
+  printf '%s\n' 'ok   Themes handler always opens the Plasma style menu'
 else
-  printf '%s\n' 'FAIL Themes handler can resolve the wrong Omarchy shell'
+  printf '%s\n' 'FAIL Themes handler does not reliably open the Plasma style menu'
   failures=$((failures + 1))
 fi
 check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml"
