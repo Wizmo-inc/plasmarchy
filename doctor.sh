@@ -102,9 +102,11 @@ else
   failures=$((failures + 1))
 fi
 
-if rg -q 'Qt\.callLater.*appActions\.popup' \
+if rg -q 'id: appActionsPanel' \
      "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null &&
-   rg -q 'closePolicy: QQC\.Popup\.CloseOnEscape$' \
+   rg -q 'visible: root\.appActionsOpen' \
+     "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null &&
+   ! rg -q 'QQC\.Menu|appActions\.popup' \
      "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null; then
   printf '%s\n' 'ok   application pin menu stays open for selection'
 else

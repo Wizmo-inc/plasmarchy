@@ -40,6 +40,7 @@ Published by **cobraxai**.
 - Omarchy-style drag-to-select screen recording from the Capture menu
 - Login-time and live background synchronization with the active Omarchy theme
 - Immediate Plasma palette, folder-icon, and Plasmarchy bar refresh after theme changes
+- Persistent application Pin/Unpin panel that remains open until selection
 - Quick power-button tap suspends directly; a deliberate long press powers down
 - Orderly Plasma reboot with previous applications and windows restored at login
 - Global `codex-resume-all` picker for saved Codex sessions from every project

@@ -1,28 +1,24 @@
 --- a/Menu.qml
 +++ b/Menu.qml
-@@ -2,6 +2,7 @@
- import Quickshell.Io
- import Quickshell.Wayland
- import QtQuick
-+import QtQuick.Controls as QQC
- import qs.Commons
- import qs.Ui
- import "MenuModel.js" as MenuModel
-@@ -80,7 +81,12 @@
+@@ -80,7 +80,16 @@
    readonly property var appLibrary: root.shell ? root.shell.appLibrary : null
    property bool deleteConfirmOpen: false
    property var deleteTarget: null
 -  onOpenedChanged: if (!opened) { deleteConfirmOpen = false; deleteTarget = null }
 +  property var pinnedAppIds: ({})
++  property bool appActionsOpen: false
++  property string appActionId: ""
++  property string appActionLabel: ""
++  property string appActionIcon: ""
 +  onOpenedChanged: if (!opened) {
 +    deleteConfirmOpen = false
 +    deleteTarget = null
-+    appActions.close()
++    appActionsOpen = false
 +  }
    // Bound to the central [menu] section in shell.toml via Color.qml.
    // Each color already includes its alpha companion (composed in the
    // singleton), so consumers can drop them straight into a Rectangle.
-@@ -137,3 +143,11 @@
+@@ -137,3 +146,11 @@
    function runAction(action) {
      var command = String(action || "")
 +    if (command.indexOf("omarchy-default-agent ") === 0) {
@@ -34,10 +30,7 @@
      if (!command) return
 +    var localBin = Quickshell.env("HOME") + "/.local/bin"
 +    command = "export PATH=" + Util.shellQuote(localBin) + ":$PATH; " + command
-@@ -141,6 +155,58 @@
-     Util.execDetached(command)
-   }
- 
+@@ -144,3 +161,59 @@
 +  function normalizeDesktopId(value) {
 +    var id = String(value || "").trim()
 +    return id.slice(-8) === ".desktop" ? id.slice(0, -8) : id
@@ -69,23 +62,27 @@
 +  }
 +
 +  function openAppActions(appId, label, icon) {
-+    appActions.appId = root.normalizeDesktopId(appId)
-+    appActions.appLabel = String(label || appId)
-+    appActions.appIcon = String(icon || "application-x-executable")
-+    // Defer until the right-click event has fully completed. Otherwise its
-+    // release can be treated as an outside click and dismiss the popup.
-+    Qt.callLater(function() { appActions.popup() })
++    root.appActionId = root.normalizeDesktopId(appId)
++    root.appActionLabel = String(label || appId)
++    root.appActionIcon = String(icon || "application-x-executable")
++    root.deleteConfirmOpen = false
++    root.appActionsOpen = true
++  }
++
++  function closeAppActions() {
++    root.appActionsOpen = false
++    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
 +  }
 +
 +  function performAppAction(action) {
-+    if (!appActions.appId) return
++    if (!root.appActionId) return
 +    var next = ({})
 +    for (var id in root.pinnedAppIds) next[id] = root.pinnedAppIds[id]
-+    if (action === "pin") next[appActions.appId] = true
-+    else if (action === "unpin") delete next[appActions.appId]
++    if (action === "pin") next[root.appActionId] = true
++    else if (action === "unpin") delete next[root.appActionId]
 +    root.pinnedAppIds = next
 +    var helper = Quickshell.env("HOME") + "/.local/bin/plasmarchy-quicklaunch"
-+    var args = [helper, action, appActions.appId, appActions.appLabel, appActions.appIcon]
++    var args = [helper, action, root.appActionId, root.appActionLabel, root.appActionIcon]
 +    root.cancel()
 +    Quickshell.execDetached(args)
 +  }
@@ -93,7 +90,7 @@
    // Menu rows only surface their detail while a search is narrowing them;
    // dmenu rows carry caller-supplied subtext that must always be visible.
    function rowHeightForDetail(detail) {
-@@ -972,6 +1035,16 @@
+@@ -972,6 +1045,16 @@
    }
  
    FileView {
@@ -110,69 +107,117 @@
      id: userMenuFile
      path: root.userMenuPath
      watchChanges: true
-@@ -1113,6 +1186,61 @@
- 
-       MouseArea { anchors.fill: parent; onClicked: {} }
- 
-+      QQC.Menu {
-+        id: appActions
-+        property string appId: ""
-+        property string appLabel: ""
-+        property string appIcon: ""
-+        width: Style.space(220)
-+
-+        modal: false
-+        closePolicy: QQC.Popup.CloseOnEscape
-+        padding: Style.space(5)
-+
-+        background: Rectangle {
-+          color: root.background
-+          radius: root.cornerRadius
-+          border.width: 1
-+          border.color: root.border
-+        }
-+
-+        QQC.MenuItem {
-+          id: pinAction
-+          text: root.isPinned(appActions.appId) ? "Unpin from Quick Launch" : "Pin to Quick Launch"
-+          height: Style.space(38)
-+          onTriggered: root.performAppAction(root.isPinned(appActions.appId) ? "unpin" : "pin")
-+          contentItem: Text {
-+            text: pinAction.text
-+            color: pinAction.highlighted ? root.selectedText : root.foreground
-+            font.family: root.fontFamily
-+            font.pixelSize: Style.font.body
-+            verticalAlignment: Text.AlignVCenter
-+          }
-+          background: Rectangle {
-+            color: pinAction.highlighted ? root.selectedBackground : "transparent"
-+            radius: root.cornerRadius
-+          }
-+        }
-+
-+        QQC.MenuItem {
-+          id: desktopAction
-+          text: "Add to Desktop"
-+          height: Style.space(38)
-+          onTriggered: root.performAppAction("desktop")
-+          contentItem: Text {
-+            text: desktopAction.text
-+            color: desktopAction.highlighted ? root.selectedText : root.foreground
-+            font.family: root.fontFamily
-+            font.pixelSize: Style.font.body
-+            verticalAlignment: Text.AlignVCenter
-+          }
-+          background: Rectangle {
-+            color: desktopAction.highlighted ? root.selectedBackground : "transparent"
-+            radius: root.cornerRadius
-+          }
-+        }
-+      }
-+
+@@ -1116,11 +1199,19 @@
        Item {
          id: keyCatcher
          anchors.fill: parent
-@@ -1381,6 +1509,7 @@
+-        z: root.deleteConfirmOpen ? 20 : 0
++        z: root.deleteConfirmOpen || root.appActionsOpen ? 20 : 0
+         focus: true
+ 
+         Keys.priority: Keys.BeforeItem
+         Keys.onPressed: function(event) {
++          if (root.appActionsOpen) {
++            if (event.key === Qt.Key_Escape) {
++              root.closeAppActions()
++              event.accepted = true
++            }
++            return
++          }
++
+           if (root.deleteConfirmOpen) {
+             if (deleteConfirm.handleKey(event)) event.accepted = true
+             return
+@@ -1164,5 +1255,88 @@
+           }
+         }
+ 
++        Item {
++          id: appActionsPanel
++          anchors.fill: parent
++          visible: root.appActionsOpen
++          z: 20
++
++          MouseArea {
++            anchors.fill: parent
++            onClicked: root.closeAppActions()
++          }
++
++          Rectangle {
++            width: Math.min(parent.width - Style.space(20), Style.space(250))
++            height: appActionColumn.implicitHeight + Style.space(16)
++            anchors.centerIn: parent
++            color: root.background
++            radius: root.cornerRadius
++            border.width: Math.max(1, Style.spacing.hairline)
++            border.color: root.border
++
++            MouseArea { anchors.fill: parent; onClicked: {} }
++
++            Column {
++              id: appActionColumn
++              anchors.left: parent.left
++              anchors.right: parent.right
++              anchors.top: parent.top
++              anchors.margins: Style.space(8)
++              spacing: Style.space(4)
++
++              Text {
++                width: parent.width
++                height: Style.space(30)
++                text: root.appActionLabel
++                color: root.foreground
++                font.family: root.fontFamily
++                font.pixelSize: Style.font.body
++                font.weight: Font.DemiBold
++                elide: Text.ElideRight
++                verticalAlignment: Text.AlignVCenter
++              }
++
++              Repeater {
++                model: [
++                  {
++                    label: root.isPinned(root.appActionId) ? "Unpin from Quick Launch" : "Pin to Quick Launch",
++                    action: root.isPinned(root.appActionId) ? "unpin" : "pin"
++                  },
++                  { label: "Add to Desktop", action: "desktop" }
++                ]
++
++                delegate: Rectangle {
++                  required property var modelData
++                  width: appActionColumn.width
++                  height: Style.space(40)
++                  radius: root.cornerRadius
++                  color: actionMouse.containsMouse ? root.selectedBackground : "transparent"
++
++                  Text {
++                    anchors.fill: parent
++                    anchors.leftMargin: Style.space(10)
++                    anchors.rightMargin: Style.space(10)
++                    text: modelData.label
++                    color: actionMouse.containsMouse ? root.selectedText : root.foreground
++                    font.family: root.fontFamily
++                    font.pixelSize: Style.font.body
++                    verticalAlignment: Text.AlignVCenter
++                    elide: Text.ElideRight
++                  }
++
++                  MouseArea {
++                    id: actionMouse
++                    anchors.fill: parent
++                    hoverEnabled: true
++                    cursorShape: Qt.PointingHandCursor
++                    onClicked: root.performAppAction(modelData.action)
++                  }
++                }
++              }
++            }
++          }
++        }
++
+         ConfirmDialog {
+           id: deleteConfirm
+@@ -1387,6 +1561,7 @@
                MouseArea {
                  id: mouseArea
                  anchors.fill: parent
@@ -180,7 +225,7 @@
                  hoverEnabled: true
                  cursorShape: row.disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
                  onEntered: root.selectFromPointer(row.index, row, {
-@@ -1390,10 +1519,14 @@
+@@ -1396,10 +1571,14 @@
                  onPositionChanged: function(mouse) {
                    root.selectFromPointer(row.index, row, mouse)
                  }
