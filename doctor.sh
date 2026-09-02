@@ -69,6 +69,8 @@ check_file "$HOME/.local/bin/plasmarchy-open-agent"
 check_file "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 check_file "$HOME/.local/bin/plasmarchy-themes-handler"
 check_file "$HOME/.local/bin/omarchy-menu-images"
+check_file "$HOME/.local/bin/omarchy-hyprland-monitor-focused"
+check_file "$HOME/.local/bin/plasmarchy-capture-screenshot"
 check_file "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 check_file "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml"
 
@@ -83,10 +85,13 @@ else
 fi
 
 if rg -q 'selection=\$\(slurp' "$HOME/.local/bin/omarchy-capture-region" 2>/dev/null &&
-   ! rg -q 'OMARCHY_SCREENRECORD_USE_PORTAL=true' "$HOME/.local/bin/omarchy-capture-screenrecording" 2>/dev/null; then
-  printf '%s\n' 'ok   screen recording uses Omarchy-style drag selection'
+   rg -q 'export PATH=.*\.local/bin' "$HOME/.local/bin/omarchy-capture-screenrecording" 2>/dev/null &&
+   rg -q 'export PATH=.*\.local/bin' "$HOME/.local/bin/plasmarchy-session-start" 2>/dev/null &&
+   rg -q 'activeOutputName' "$HOME/.local/bin/omarchy-hyprland-monitor-focused" 2>/dev/null &&
+   rg -q 'resolution=0x0' "$HOME/.local/bin/omarchy-capture-screenrecording" 2>/dev/null; then
+  printf '%s\n' 'ok   screen recording uses Plasma monitor and drag selection helpers'
 else
-  printf '%s\n' 'FAIL screen recording is not using the Plasmarchy region selector'
+  printf '%s\n' 'FAIL screen recording is not using the Plasma capture helpers'
   failures=$((failures + 1))
 fi
 

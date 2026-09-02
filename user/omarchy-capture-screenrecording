@@ -8,15 +8,19 @@ if [[ ${XDG_CURRENT_DESKTOP:-} != *KDE* && ${XDG_SESSION_DESKTOP:-} != *KDE* ]];
   exec /usr/bin/omarchy-capture-screenrecording "$@"
 fi
 
-args=()
-for arg in "$@"; do
-  case "$arg" in
-    --fullscreen)
-      # The packaged fullscreen branch asks hyprctl for a monitor. Fall back to
-      # the familiar selector in Plasma instead of opening KDE's share dialog.
-      ;;
-    *) args+=("$arg") ;;
-  esac
+# Put the Plasma-compatible monitor and region helpers ahead of the packaged
+# command. This preserves --fullscreen while making its normal region flow use
+# slurp under KWin. The packaged default-resolution probe asks hyprctl for JSON;
+# provide the explicit no-resize value on Plasma so that probe is never run.
+export PATH="$HOME/.local/bin:$PATH"
+args=("$@")
+has_fullscreen=0
+has_resolution=0
+for arg in "${args[@]}"; do
+  [[ $arg == --fullscreen ]] && has_fullscreen=1
+  [[ $arg == --resolution=* ]] && has_resolution=1
 done
-
+if (( has_fullscreen && !has_resolution )); then
+  args+=(--resolution=0x0)
+fi
 exec /usr/bin/omarchy-capture-screenrecording "${args[@]}"

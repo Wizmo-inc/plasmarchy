@@ -177,9 +177,11 @@ backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
 backup "$HOME/.local/bin/omarchy-menu-images"
+backup "$HOME/.local/bin/omarchy-hyprland-monitor-focused"
 backup "$HOME/.local/bin/omarchy-capture-screenshot"
 backup "$HOME/.local/bin/omarchy-capture-region"
 backup "$HOME/.local/bin/omarchy-capture-screenrecording"
+backup "$HOME/.local/bin/plasmarchy-capture-screenshot"
 backup "$HOME/.local/bin/omarchy-system-reboot"
 backup "$HOME/.local/bin/codex-resume-all"
 backup "$HOME/.local/bin/plasmarchy-session-start"
@@ -245,9 +247,11 @@ done
 
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
 install -m 0755 "$repo_dir/user/omarchy-menu-images" "$HOME/.local/bin/omarchy-menu-images"
+install -m 0755 "$repo_dir/user/omarchy-hyprland-monitor-focused" "$HOME/.local/bin/omarchy-hyprland-monitor-focused"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/omarchy-capture-region" "$HOME/.local/bin/omarchy-capture-region"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenrecording" "$HOME/.local/bin/omarchy-capture-screenrecording"
+install -m 0755 "$repo_dir/user/plasmarchy-capture-screenshot" "$HOME/.local/bin/plasmarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/omarchy-system-reboot" "$HOME/.local/bin/omarchy-system-reboot"
 install -m 0755 "$repo_dir/user/codex-resume-all" "$HOME/.local/bin/codex-resume-all"
 install -m 0644 "$repo_dir/user/systemd/plasmarchy-session-checkpoint.service" \
@@ -367,7 +371,12 @@ kwriteconfig6 --file plasmashellrc --group Shell --key ShellPackage org.omarchy.
 capture_desktop=$HOME/.local/share/applications/org.omarchy.capture.desktop
 install -m 0644 "$repo_dir/user/org.omarchy.capture.desktop" "$capture_desktop"
 kwriteconfig6 --file kglobalshortcutsrc --group org_kde_spectacle_desktop --key _launch \
-  $'Meta+Shift+S,Print\tMeta+Shift+S,Launch Spectacle'
+  $'Meta+Shift+S\tMeta+Shift+S,Launch Spectacle'
+# Persist the custom Print action as well.  KGlobalAccel stores desktop
+# component ids with underscores in this config file, while its live D-Bus
+# identity is the dotted desktop-file id.
+kwriteconfig6 --file kglobalshortcutsrc --group org_omarchy_capture_desktop --key _launch \
+  $'Print\tPrint,Omarchy Screenshot'
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 if systemctl --user is-active plasma-kglobalaccel.service >/dev/null 2>&1; then
   systemctl --user restart plasma-kglobalaccel.service
@@ -377,10 +386,6 @@ if systemctl --user is-active plasma-kglobalaccel.service >/dev/null 2>&1; then
       grep -Fq 'org.omarchy.capture.desktop' && break
     sleep 1
   done
-  # Remove the underscored component identity used by the first preview. The
-  # desktop service's canonical dotted id remains the only Print owner.
-  qdbus6 org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel.unregister \
-    org_omarchy_capture_desktop _launch >/dev/null 2>&1 || true
   # Force Spectacle's active shortcut to Meta+Shift+S only. The config write
   # above preserves its default metadata; this D-Bus call resolves the live
   # ownership conflict without waiting for another login.
@@ -471,7 +476,8 @@ if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]]; then
   # shell.qml filename. Ask Quickshell to stop the exact instance so updates
   # cannot leave an old plugin component running behind the new files.
   qs kill --any-display --path "$HOME/.config/quickshell/plasma-omarchy" >/dev/null 2>&1 || true
-  env OMARCHY_PATH="$omarchy_root" qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"
+  env PATH="$HOME/.local/bin:$PATH" OMARCHY_PATH="$omarchy_root" \
+    qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"
 fi
 
 printf '\nInstalled Plasmarchy. Log out and choose Plasma if this is a new Plasma installation.\n'

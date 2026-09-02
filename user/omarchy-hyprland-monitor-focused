@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* || ${XDG_SESSION_DESKTOP:-} == *KDE* ]]; then
+  exec qdbus6 org.kde.KWin /KWin org.kde.KWin.activeOutputName
+fi
+
+exec /usr/bin/omarchy-hyprland-monitor-focused "$@"

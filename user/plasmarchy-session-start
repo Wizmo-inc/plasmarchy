@@ -4,6 +4,11 @@
 # for its scripting endpoint, then make the current Omarchy theme authoritative
 # before starting the hybrid bar.
 
+# Quickshell launches bar actions through the inherited session environment.
+# Keep Plasmarchy's Plasma-compatible helpers ahead of Omarchy's packaged
+# Hyprland-only capture commands for both menu actions and indicator buttons.
+export PATH="$HOME/.local/bin:$PATH"
+
 for ((attempt = 0; attempt < 100; attempt++)); do
   qdbus6 org.kde.plasmashell /PlasmaShell >/dev/null 2>&1 && break
   sleep 0.1
