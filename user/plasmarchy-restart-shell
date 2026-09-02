@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Theme switching replaces the active theme directory atomically. Plasma's
+# Folder View does not invalidate desktop-icon caches when only kdeglobals
+# changes, so reload the desktop shell before restarting Plasmarchy's own bar.
+hybrid_path="$HOME/.config/quickshell/plasma-omarchy"
+
+sleep 0.25
+systemctl --user restart plasma-plasmashell.service >/dev/null 2>&1 || true
+for ((attempt = 0; attempt < 100; attempt++)); do
+  qdbus6 org.kde.plasmashell /PlasmaShell >/dev/null 2>&1 && break
+  sleep 0.1
+done
+qs kill --any-display --path "$hybrid_path" >/dev/null 2>&1 || true
+for ((attempt = 0; attempt < 50; attempt++)); do
+  if ! qs list --all 2>/dev/null | grep -Fq "$hybrid_path/shell.qml"; then
+    break
+  fi
+  sleep 0.1
+done
+cd "$HOME/Work"
+exec qs --no-duplicate --daemonize --path "$hybrid_path"

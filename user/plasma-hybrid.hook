@@ -8,6 +8,7 @@ colors_file="$theme_root/colors.toml"
 scheme_dir="$HOME/.local/share/color-schemes"
 scheme_file="$scheme_dir/Omarchy.colors"
 icons_file="$theme_root/icons.theme"
+hook_event=${1:-theme-change}
 
 [[ -f $colors_file ]] || exit 0
 
@@ -85,6 +86,17 @@ inactiveBlend=$(rgb "$selection")
 EOF
 mv "$scheme_tmp" "$scheme_file"
 
+# The tool intentionally skips a scheme that is already active. Since this
+# file is rewritten in place, briefly select a stock scheme during a live
+# theme change so Plasma applications invalidate their cached palette.
+if [[ $hook_event != install && $hook_event != session-start ]] &&
+   [[ $(kreadconfig6 --file kdeglobals --group General --key ColorScheme 2>/dev/null) == Omarchy ]]; then
+  if [[ $(omarchy-theme-color --file "$colors_file" mode 2>/dev/null || true) == light ]]; then
+    plasma-apply-colorscheme BreezeLight >/dev/null 2>&1 || true
+  else
+    plasma-apply-colorscheme BreezeDark >/dev/null 2>&1 || true
+  fi
+fi
 plasma-apply-colorscheme Omarchy >/dev/null 2>&1 || true
 
 # Omarchy applies icons through GNOME settings, while Plasma reads the KDE
@@ -92,6 +104,10 @@ plasma-apply-colorscheme Omarchy >/dev/null 2>&1 || true
 icon_theme="Yaru-blue"
 if [[ -f $icons_file ]]; then
   icon_theme=$(tr -d '[:space:]' < "$icons_file")
+fi
+# Treat theme metadata as a theme identifier, never as a path.
+if [[ ! $icon_theme =~ ^[A-Za-z0-9._+-]+$ ]]; then
+  icon_theme="Yaru-blue"
 fi
 
 icon_theme_exists() {
@@ -119,7 +135,10 @@ fi
 # such as `keyboard-layout` otherwise resolve as a generic file. Keep the
 # Omarchy-selected family first and fall back to the matching Breeze variant
 # only for icons it does not provide.
-plasma_icon_theme="Omarchy-Plasma"
+# KDE caches an icon theme's inheritance chain by theme name. Give each
+# Omarchy icon family its own wrapper so switching Yaru variants refreshes
+# Dolphin's folder icons immediately while retaining Plasma's Breeze fallback.
+plasma_icon_theme="Omarchy-Plasma-$icon_theme"
 plasma_icon_dir="$HOME/.local/share/icons/$plasma_icon_theme"
 if [[ $mode == "light" ]] && icon_theme_exists breeze; then
   plasma_icon_fallback="breeze"
@@ -146,9 +165,19 @@ Type=Scalable
 EOF
 mv "$plasma_icon_tmp" "$plasma_icon_index"
 
+if [[ $hook_event != install && $hook_event != session-start ]] &&
+   [[ $(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null) == "$plasma_icon_theme" ]]; then
+  kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "$plasma_icon_fallback"
+fi
 kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "$plasma_icon_theme"
 
 current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null || true)
 if [[ -f $current_background ]]; then
   "$HOME/.local/bin/plasmarchy-sync-wallpaper" "$current_background"
+fi
+
+if [[ $hook_event != install && $hook_event != session-start ]] &&
+   [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]] &&
+   [[ -x $HOME/.local/bin/plasmarchy-restart-shell ]]; then
+  setsid -f "$HOME/.local/bin/plasmarchy-restart-shell" >/dev/null 2>&1
 fi

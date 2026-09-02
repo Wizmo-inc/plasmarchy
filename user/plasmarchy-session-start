@@ -22,4 +22,5 @@ theme_hook="$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 agent_menu_refresh="$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 [[ -x $agent_menu_refresh ]] && "$agent_menu_refresh"
 
+cd "$HOME/Work"
 exec qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"

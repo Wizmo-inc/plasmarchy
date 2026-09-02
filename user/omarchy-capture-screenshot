@@ -4,7 +4,7 @@ set -euo pipefail
 # Keep the packaged Omarchy flow in Hyprland. KWin deliberately does not expose
 # the wlroots screenshot protocol used by grim, so use Spectacle only as the
 # capture backend in Plasma and retain Omarchy's save/copy/editor workflow.
-if [[ ${XDG_CURRENT_DESKTOP:-} != *KDE* ]]; then
+if [[ ${OMARCHY_PLASMA_CAPTURE:-} != 1 && ${XDG_CURRENT_DESKTOP:-} != *KDE* ]]; then
   exec /usr/bin/omarchy-capture-screenshot "$@"
 fi
 

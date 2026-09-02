@@ -17,7 +17,7 @@ notify_error() {
 }
 
 agent=$1
-directory=${2:-$PWD}
+directory=${2:-${PLASMARCHY_AGENT_WORKSPACE:-$HOME/Work}}
 
 if [[ $directory == file://* ]]; then
   directory=${directory#file://}

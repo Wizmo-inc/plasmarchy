@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Omarchy Screenshot
+Name=Plasmarchy Screenshot
 Comment=Omarchy screenshot flow for Plasma
 Exec=plasmarchy-capture-screenshot
 Icon=camera-photo

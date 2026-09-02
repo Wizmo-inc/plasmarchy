@@ -63,6 +63,7 @@ check_file "$HOME/.local/bin/codex-resume-all"
 check_file "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.service"
 check_file "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.timer"
 check_file "$HOME/.local/bin/plasmarchy-session-start"
+check_file "$HOME/.local/bin/plasmarchy-restart-shell"
 check_file "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
 check_file "$HOME/.local/bin/plasmarchy-open-agent"
@@ -74,9 +75,49 @@ check_file "$HOME/.local/bin/plasmarchy-capture-screenshot"
 check_file "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 check_file "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml"
 
+if rg -q 'command\.indexOf\("omarchy-default-agent "\).*=== 0' \
+     "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null &&
+   rg -q 'workDir = Quickshell\.env\("HOME"\) \+ "/Work"' \
+     "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null &&
+   rg -q '^cd "\$HOME/Work"$' "$HOME/.local/bin/plasmarchy-session-start" 2>/dev/null &&
+   [[ $(cd "$HOME" 2>/dev/null &&
+     PLASMARCHY_AGENT_DRY_RUN=true "$HOME/.local/bin/plasmarchy-open-agent" codex 2>/dev/null |
+     sed -n 's/^directory=//p') == "$HOME/Work" ]]; then
+  printf '%s\n' 'ok   panel agents start in ~/Work while folder actions keep their target'
+else
+  printf '%s\n' 'FAIL panel agent launch directory is not ~/Work'
+  failures=$((failures + 1))
+fi
+
+if rg -q 'plasma-apply-colorscheme Breeze(Light|Dark)' \
+     "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook" 2>/dev/null &&
+   rg -q 'plasmarchy-restart-shell' \
+     "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook" 2>/dev/null &&
+   rg -q 'restart plasma-plasmashell\.service' \
+     "$HOME/.local/bin/plasmarchy-restart-shell" 2>/dev/null &&
+   rg -q 'qs list --all' "$HOME/.local/bin/plasmarchy-restart-shell" 2>/dev/null; then
+  printf '%s\n' 'ok   theme changes refresh Plasma desktop colors/icons and the Plasmarchy bar'
+else
+  printf '%s\n' 'FAIL live Plasmarchy theme refresh is incomplete'
+  failures=$((failures + 1))
+fi
+
+if rg -q 'Qt\.callLater.*appActions\.popup' \
+     "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null &&
+   rg -q 'closePolicy: QQC\.Popup\.CloseOnEscape$' \
+     "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   application pin menu stays open for selection'
+else
+  printf '%s\n' 'FAIL application pin menu can dismiss before selection'
+  failures=$((failures + 1))
+fi
+
 current_background=$(readlink -f "$HOME/.local/state/omarchy/current/background" 2>/dev/null)
+shell_package=$(kreadconfig6 --file plasmashellrc --group Shell --key ShellPackage 2>/dev/null)
+shell_package=${shell_package:-org.kde.plasma.desktop}
+plasma_layout_file="$HOME/.config/plasma-$shell_package-appletsrc"
 plasma_background=$(awk -F= '/^Image=file:\/\// {sub(/^Image=file:\/\//, ""); print; exit}' \
-  "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc" 2>/dev/null)
+  "$plasma_layout_file" 2>/dev/null)
 if [[ -n $current_background && $plasma_background == "$current_background" ]]; then
   printf '%s\n' 'ok   Plasma wallpaper matches the current Omarchy background'
 else
@@ -122,7 +163,7 @@ else
   printf '%s\n' 'warn Omarchy-style SDDM login layout switcher is not installed'
 fi
 
-capture_desktop="$HOME/.local/share/applications/org.omarchy.capture.desktop"
+capture_desktop="$HOME/.local/share/applications/org.plasmarchy.capture.desktop"
 capture_action_ready=false
 if rg -q '^Exec=.*plasmarchy-capture-screenshot$' "$capture_desktop" 2>/dev/null &&
    rg -q '^StartupNotify=false$' "$capture_desktop" 2>/dev/null &&
@@ -130,7 +171,7 @@ if rg -q '^Exec=.*plasmarchy-capture-screenshot$' "$capture_desktop" 2>/dev/null
    rg -q '^X-KDE-GlobalAccel-CommandShortcut=true$' "$capture_desktop" 2>/dev/null &&
    ! rg -q '^NoDisplay=true$' "$capture_desktop" 2>/dev/null &&
    [[ $(kreadconfig6 --file kglobalshortcutsrc --group services \
-     --group org.omarchy.capture.desktop --key _launch 2>/dev/null) == Print* ]]; then
+     --group org.plasmarchy.capture.desktop --key _launch 2>/dev/null) == Print* ]]; then
   capture_action_ready=true
 fi
 
@@ -138,7 +179,8 @@ if qdbus6 org.kde.kglobalaccel /kglobalaccel >/dev/null 2>&1; then
   print_owners=$(qdbus6 --literal org.kde.kglobalaccel /kglobalaccel \
     org.kde.KGlobalAccel.getGlobalShortcutsByKey 16777225 2>/dev/null)
   if [[ $capture_action_ready == true &&
-        $print_owners == *org.omarchy.capture.desktop* &&
+        $print_owners == *org.plasmarchy.capture.desktop* &&
+        $print_owners != *org.omarchy.capture.desktop* &&
         $print_owners != *org_omarchy_capture_desktop* &&
         $print_owners != *org.kde.spectacle.desktop* ]]; then
     printf '%s\n' 'ok   Print exclusively opens the Omarchy screenshot flow'
@@ -158,7 +200,7 @@ if rg -q 'refreshCurrentShell' "$HOME/.config/omarchy/hooks/theme-set.d" 2>/dev/
   failures=$((failures + 1))
 fi
 
-if [[ $(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null) == Omarchy-Plasma ]] &&
+if [[ $(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null) == Omarchy-Plasma-* ]] &&
    [[ $(kiconfinder6 keyboard-layout 2>/dev/null) == *keyboard-layout* ]]; then
   printf '%s\n' 'ok   Plasma-specific icons fall back cleanly from the Omarchy icon theme'
 else

@@ -22,15 +22,19 @@
    // Bound to the central [menu] section in shell.toml via Color.qml.
    // Each color already includes its alpha companion (composed in the
    // singleton), so consumers can drop them straight into a Rectangle.
-@@ -137,3 +143,7 @@
+@@ -137,3 +143,11 @@
    function runAction(action) {
      var command = String(action || "")
++    if (command.indexOf("omarchy-default-agent ") === 0) {
++      var workDir = Quickshell.env("HOME") + "/Work"
++      command = "cd " + Util.shellQuote(workDir) + " && " + command
++    }
 +    if (command === "omarchy-system-reboot")
 +      command = Quickshell.env("HOME") + "/.local/bin/omarchy-system-reboot"
      if (!command) return
 +    var localBin = Quickshell.env("HOME") + "/.local/bin"
 +    command = "export PATH=" + Util.shellQuote(localBin) + ":$PATH; " + command
-@@ -141,6 +151,56 @@
+@@ -141,6 +155,58 @@
      Util.execDetached(command)
    }
  
@@ -68,7 +72,9 @@
 +    appActions.appId = root.normalizeDesktopId(appId)
 +    appActions.appLabel = String(label || appId)
 +    appActions.appIcon = String(icon || "application-x-executable")
-+    appActions.popup()
++    // Defer until the right-click event has fully completed. Otherwise its
++    // release can be treated as an outside click and dismiss the popup.
++    Qt.callLater(function() { appActions.popup() })
 +  }
 +
 +  function performAppAction(action) {
@@ -87,7 +93,7 @@
    // Menu rows only surface their detail while a search is narrowing them;
    // dmenu rows carry caller-supplied subtext that must always be visible.
    function rowHeightForDetail(detail) {
-@@ -972,6 +1028,16 @@
+@@ -972,6 +1035,16 @@
    }
  
    FileView {
@@ -104,7 +110,7 @@
      id: userMenuFile
      path: root.userMenuPath
      watchChanges: true
-@@ -1113,6 +1179,61 @@
+@@ -1113,6 +1186,61 @@
  
        MouseArea { anchors.fill: parent; onClicked: {} }
  
@@ -115,8 +121,8 @@
 +        property string appIcon: ""
 +        width: Style.space(220)
 +
-+        modal: true
-+        closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutside
++        modal: false
++        closePolicy: QQC.Popup.CloseOnEscape
 +        padding: Style.space(5)
 +
 +        background: Rectangle {
@@ -166,7 +172,7 @@
        Item {
          id: keyCatcher
          anchors.fill: parent
-@@ -1381,6 +1502,7 @@
+@@ -1381,6 +1509,7 @@
                MouseArea {
                  id: mouseArea
                  anchors.fill: parent
@@ -174,7 +180,7 @@
                  hoverEnabled: true
                  cursorShape: row.disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
                  onEntered: root.selectFromPointer(row.index, row, {
-@@ -1390,10 +1512,14 @@
+@@ -1390,10 +1519,14 @@
                  onPositionChanged: function(mouse) {
                    root.selectFromPointer(row.index, row, mouse)
                  }

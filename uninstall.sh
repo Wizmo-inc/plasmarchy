@@ -125,6 +125,7 @@ restore_or_remove "$HOME/.local/bin/plasmarchy-capture-screenshot"
 restore_or_remove "$HOME/.local/bin/omarchy-system-reboot"
 restore_or_remove "$HOME/.local/bin/codex-resume-all"
 restore_or_remove "$HOME/.local/bin/plasmarchy-session-start"
+restore_or_remove "$HOME/.local/bin/plasmarchy-restart-shell"
 restore_or_remove "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 restore_or_remove "$HOME/.local/bin/plasmarchy-quicklaunch"
 restore_or_remove "$HOME/.local/bin/plasmarchy-open-agent"
@@ -132,15 +133,27 @@ restore_or_remove "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 restore_or_remove "$HOME/.local/bin/plasmarchy-themes-handler"
 restore_or_remove "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 restore_or_remove "$HOME/.local/share/applications/org.omarchy.capture.desktop"
+restore_or_remove "$HOME/.local/share/applications/org.plasmarchy.capture.desktop"
 restore_or_remove "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
 plasma_icon_theme_dir="$HOME/.local/share/icons/Omarchy-Plasma"
 plasma_icon_theme_backup="$backup_dir/${plasma_icon_theme_dir#/}"
-if [[ ! -e $plasma_icon_theme_backup ]] &&
-   [[ $(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null) == Omarchy-Plasma ]]; then
-  previous_icon_theme=$(sed -n 's/^Inherits=\([^,]*\).*/\1/p' "$plasma_icon_theme_dir/index.theme" 2>/dev/null)
+active_icon_theme=$(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null)
+if [[ $active_icon_theme =~ ^Omarchy-Plasma-[A-Za-z0-9._+-]+$ ]]; then
+  active_icon_theme_dir="$HOME/.local/share/icons/$active_icon_theme"
+  previous_icon_theme=$(sed -n 's/^Inherits=\([^,]*\).*/\1/p' \
+    "$active_icon_theme_dir/index.theme" 2>/dev/null)
+  kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "${previous_icon_theme:-breeze-dark}"
+elif [[ ! -e $plasma_icon_theme_backup ]] && [[ $active_icon_theme == Omarchy-Plasma ]]; then
+  previous_icon_theme=$(sed -n 's/^Inherits=\([^,]*\).*/\1/p' \
+    "$plasma_icon_theme_dir/index.theme" 2>/dev/null)
   kwriteconfig6 --file kdeglobals --group Icons --key Theme --notify "${previous_icon_theme:-breeze-dark}"
 fi
 restore_or_remove "$plasma_icon_theme_dir"
+while IFS= read -r -d '' generated_icon_theme; do
+  assert_user_path_safe "$generated_icon_theme"
+  rm -rf -- "$generated_icon_theme"
+done < <(find "$HOME/.local/share/icons" -mindepth 1 -maxdepth 1 -type d \
+  -name 'Omarchy-Plasma-*' -print0 2>/dev/null)
 restore_or_remove "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder"
 restore_or_remove "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 restore_or_remove "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
@@ -148,6 +161,7 @@ for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-
   restore_or_remove "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 restore_or_remove "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+restore_or_remove "$HOME/.config/plasma-org.omarchy.plasma.hybrid-appletsrc"
 systemctl --user daemon-reload
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 systemctl --user try-restart plasma-kglobalaccel.service >/dev/null 2>&1 || true

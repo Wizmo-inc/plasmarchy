@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-exec "$HOME/.local/bin/omarchy-capture-screenshot" "$@"
+OMARCHY_PLASMA_CAPTURE=1 exec "$HOME/.local/bin/omarchy-capture-screenshot" "$@"

@@ -185,6 +185,7 @@ backup "$HOME/.local/bin/plasmarchy-capture-screenshot"
 backup "$HOME/.local/bin/omarchy-system-reboot"
 backup "$HOME/.local/bin/codex-resume-all"
 backup "$HOME/.local/bin/plasmarchy-session-start"
+backup "$HOME/.local/bin/plasmarchy-restart-shell"
 backup "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 backup "$HOME/.local/bin/plasmarchy-quicklaunch"
 backup "$HOME/.local/bin/plasmarchy-open-agent"
@@ -192,12 +193,18 @@ backup "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 backup "$HOME/.local/bin/plasmarchy-themes-handler"
 backup "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 backup "$HOME/.local/share/applications/org.omarchy.capture.desktop"
+backup "$HOME/.local/share/applications/org.plasmarchy.capture.desktop"
 backup "$HOME/.local/share/applications/org.plasmarchy.themes.desktop"
 backup "$HOME/.local/share/icons/Omarchy-Plasma"
+active_icon_theme=$(kreadconfig6 --file kdeglobals --group Icons --key Theme 2>/dev/null || true)
+if [[ $active_icon_theme =~ ^Omarchy-Plasma-[A-Za-z0-9._+-]+$ ]]; then
+  backup "$HOME/.local/share/icons/$active_icon_theme"
+fi
 backup "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder"
 backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 backup "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+backup "$HOME/.config/plasma-org.omarchy.plasma.hybrid-appletsrc"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop plasma.agents plasma.menu omatask; do
   backup "$HOME/.config/omarchy/plugins/$plugin_id"
 done
@@ -214,6 +221,10 @@ mkdir -p \
   "$HOME/.local/share/plasma/plasmoids" \
   "$HOME/.local/share/plasma/shells" \
   "$HOME/.local/share/kwin/scripts"
+
+# Panel agent launches have no folder argument. Give them a stable workspace
+# instead of inheriting whichever directory started the Plasmarchy shell.
+mkdir -p "$HOME/Work"
 
 install -m 0644 "$repo_dir/user/plasma-shell.json" "$HOME/.config/omarchy/plasma-shell.json"
 for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop omatask; do
@@ -259,6 +270,7 @@ install -m 0644 "$repo_dir/user/systemd/plasmarchy-session-checkpoint.service" \
 install -m 0644 "$repo_dir/user/systemd/plasmarchy-session-checkpoint.timer" \
   "$HOME/.config/systemd/user/plasmarchy-session-checkpoint.timer"
 install -m 0755 "$repo_dir/user/plasmarchy-session-start" "$HOME/.local/bin/plasmarchy-session-start"
+install -m 0755 "$repo_dir/user/plasmarchy-restart-shell" "$HOME/.local/bin/plasmarchy-restart-shell"
 install -m 0755 "$repo_dir/user/plasmarchy-sync-wallpaper" "$HOME/.local/bin/plasmarchy-sync-wallpaper"
 install -m 0755 "$repo_dir/user/plasmarchy-quicklaunch" "$HOME/.local/bin/plasmarchy-quicklaunch"
 install -m 0755 "$repo_dir/user/plasmarchy-open-agent" "$HOME/.local/bin/plasmarchy-open-agent"
@@ -368,11 +380,16 @@ kwriteconfig6 --file plasmashellrc --group Shell --key ShellPackage org.omarchy.
 
 # Replace Spectacle's Print shortcut with the Omarchy workflow. Spectacle stays
 # available on Meta+Shift+S and remains the KWin-compatible capture backend.
-capture_desktop=$HOME/.local/share/applications/org.omarchy.capture.desktop
+# Use a fresh Plasmarchy service id: KDE caches command desktop entries by
+# storage id, and reusing an older id can keep launching a pre-Plasma command.
+capture_desktop=$HOME/.local/share/applications/org.plasmarchy.capture.desktop
 # Resolve the user-owned executable while installing. KGlobalAccel may launch
 # this action from a systemd user service whose PATH does not include ~/.local/bin.
 perl -pe 's#^Exec=plasmarchy-capture-screenshot$#Exec=$ENV{HOME}/.local/bin/plasmarchy-capture-screenshot#' \
-  "$repo_dir/user/org.omarchy.capture.desktop" | atomic_write "$capture_desktop" 0644
+  "$repo_dir/user/org.plasmarchy.capture.desktop" | atomic_write "$capture_desktop" 0644
+# Remove the preview service id after preserving it in the install backup. Its
+# default Print shortcut would otherwise remain a competing KDE action.
+rm -f -- "$HOME/.local/share/applications/org.omarchy.capture.desktop"
 kwriteconfig6 --file kglobalshortcutsrc --group org_kde_spectacle_desktop --key _launch \
   $'Meta+Shift+S\tMeta+Shift+S,Launch Spectacle'
 # Persist the custom Print action in the services namespace used by Plasma's
@@ -380,25 +397,25 @@ kwriteconfig6 --file kglobalshortcutsrc --group org_kde_spectacle_desktop --key 
 # the preview releases so it cannot shadow the command action.
 kwriteconfig6 --delete --file kglobalshortcutsrc \
   --group org_omarchy_capture_desktop --key _launch ''
+kwriteconfig6 --delete --file kglobalshortcutsrc --group services \
+  --group org.omarchy.capture.desktop --key _launch
 kwriteconfig6 --file kglobalshortcutsrc --group services \
-  --group org.omarchy.capture.desktop --key _launch \
-  $'Print\tPrint,Omarchy Screenshot'
+  --group org.plasmarchy.capture.desktop --key _launch \
+  $'Print\tPrint,Plasmarchy Screenshot'
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
-if systemctl --user is-active plasma-kglobalaccel.service >/dev/null 2>&1; then
-  systemctl --user restart plasma-kglobalaccel.service
-  for attempt in 1 2 3 4 5; do
-    qdbus6 --literal org.kde.kglobalaccel /kglobalaccel \
-      org.kde.KGlobalAccel.getGlobalShortcutsByKey 16777225 2>/dev/null | \
-      grep -Fq 'org.omarchy.capture.desktop' && break
-    sleep 1
-  done
-  # Force Spectacle's active shortcut to Meta+Shift+S only. The config write
-  # above preserves its default metadata; this D-Bus call resolves the live
-  # ownership conflict without waiting for another login.
-  busctl --user call org.kde.kglobalaccel /kglobalaccel org.kde.KGlobalAccel setShortcut \
-    asaiu 4 org.kde.spectacle.desktop _launch Spectacle 'Launch Spectacle' \
-    1 301989971 4 >/dev/null
-fi
+# Reload the command desktop entry immediately. This is also needed when the
+# old preview component is still resident in the current Plasma session.
+systemctl --user restart plasma-kglobalaccel.service >/dev/null 2>&1 || true
+for attempt in 1 2 3 4 5; do
+  print_owners=$(qdbus6 --literal org.kde.kglobalaccel /kglobalaccel \
+    org.kde.KGlobalAccel.getGlobalShortcutsByKey 16777225 2>/dev/null || true)
+  if grep -Fq 'org.plasmarchy.capture.desktop' <<< "$print_owners" &&
+     ! grep -Fq 'org.omarchy.capture.desktop' <<< "$print_owners" &&
+     ! grep -Fq 'org.kde.spectacle.desktop' <<< "$print_owners"; then
+    break
+  fi
+  sleep 1
+done
 
 # Keep SDDM's minimal login, but skip Plasma's second branded startup screen.
 kwriteconfig6 --file ksplashrc --group KSplash --key Theme --notify None
@@ -482,8 +499,18 @@ if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]]; then
   # shell.qml filename. Ask Quickshell to stop the exact instance so updates
   # cannot leave an old plugin component running behind the new files.
   qs kill --any-display --path "$HOME/.config/quickshell/plasma-omarchy" >/dev/null 2>&1 || true
-  env PATH="$HOME/.local/bin:$PATH" OMARCHY_PATH="$omarchy_root" \
-    qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"
+  for ((attempt = 0; attempt < 50; attempt++)); do
+    if ! qs list --all 2>/dev/null | grep -Fq \
+      "$HOME/.config/quickshell/plasma-omarchy/shell.qml"; then
+      break
+    fi
+    sleep 0.1
+  done
+  (
+    cd "$HOME/Work"
+    env PATH="$HOME/.local/bin:$PATH" OMARCHY_PATH="$omarchy_root" \
+      qs --no-duplicate --daemonize --path "$HOME/.config/quickshell/plasma-omarchy"
+  )
 fi
 
 printf '\nInstalled Plasmarchy. Log out and choose Plasma if this is a new Plasma installation.\n'
