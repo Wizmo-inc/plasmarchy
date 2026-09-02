@@ -369,13 +369,19 @@ kwriteconfig6 --file plasmashellrc --group Shell --key ShellPackage org.omarchy.
 # Replace Spectacle's Print shortcut with the Omarchy workflow. Spectacle stays
 # available on Meta+Shift+S and remains the KWin-compatible capture backend.
 capture_desktop=$HOME/.local/share/applications/org.omarchy.capture.desktop
-install -m 0644 "$repo_dir/user/org.omarchy.capture.desktop" "$capture_desktop"
+# Resolve the user-owned executable while installing. KGlobalAccel may launch
+# this action from a systemd user service whose PATH does not include ~/.local/bin.
+perl -pe 's#^Exec=plasmarchy-capture-screenshot$#Exec=$ENV{HOME}/.local/bin/plasmarchy-capture-screenshot#' \
+  "$repo_dir/user/org.omarchy.capture.desktop" | atomic_write "$capture_desktop" 0644
 kwriteconfig6 --file kglobalshortcutsrc --group org_kde_spectacle_desktop --key _launch \
   $'Meta+Shift+S\tMeta+Shift+S,Launch Spectacle'
-# Persist the custom Print action as well.  KGlobalAccel stores desktop
-# component ids with underscores in this config file, while its live D-Bus
-# identity is the dotted desktop-file id.
-kwriteconfig6 --file kglobalshortcutsrc --group org_omarchy_capture_desktop --key _launch \
+# Persist the custom Print action in the services namespace used by Plasma's
+# command-shortcut desktop entries. Remove the legacy flat component key from
+# the preview releases so it cannot shadow the command action.
+kwriteconfig6 --delete --file kglobalshortcutsrc \
+  --group org_omarchy_capture_desktop --key _launch ''
+kwriteconfig6 --file kglobalshortcutsrc --group services \
+  --group org.omarchy.capture.desktop --key _launch \
   $'Print\tPrint,Omarchy Screenshot'
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
 if systemctl --user is-active plasma-kglobalaccel.service >/dev/null 2>&1; then

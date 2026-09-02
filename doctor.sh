@@ -122,10 +122,23 @@ else
   printf '%s\n' 'warn Omarchy-style SDDM login layout switcher is not installed'
 fi
 
+capture_desktop="$HOME/.local/share/applications/org.omarchy.capture.desktop"
+capture_action_ready=false
+if rg -q '^Exec=.*plasmarchy-capture-screenshot$' "$capture_desktop" 2>/dev/null &&
+   rg -q '^StartupNotify=false$' "$capture_desktop" 2>/dev/null &&
+   rg -q '^DBusActivatable=false$' "$capture_desktop" 2>/dev/null &&
+   rg -q '^X-KDE-GlobalAccel-CommandShortcut=true$' "$capture_desktop" 2>/dev/null &&
+   ! rg -q '^NoDisplay=true$' "$capture_desktop" 2>/dev/null &&
+   [[ $(kreadconfig6 --file kglobalshortcutsrc --group services \
+     --group org.omarchy.capture.desktop --key _launch 2>/dev/null) == Print* ]]; then
+  capture_action_ready=true
+fi
+
 if qdbus6 org.kde.kglobalaccel /kglobalaccel >/dev/null 2>&1; then
   print_owners=$(qdbus6 --literal org.kde.kglobalaccel /kglobalaccel \
     org.kde.KGlobalAccel.getGlobalShortcutsByKey 16777225 2>/dev/null)
-  if [[ $print_owners == *org.omarchy.capture.desktop* &&
+  if [[ $capture_action_ready == true &&
+        $print_owners == *org.omarchy.capture.desktop* &&
         $print_owners != *org_omarchy_capture_desktop* &&
         $print_owners != *org.kde.spectacle.desktop* ]]; then
     printf '%s\n' 'ok   Print exclusively opens the Omarchy screenshot flow'
@@ -133,7 +146,7 @@ if qdbus6 org.kde.kglobalaccel /kglobalaccel >/dev/null 2>&1; then
     printf '%s\n' 'FAIL Print has a missing or conflicting screenshot shortcut'
     failures=$((failures + 1))
   fi
-elif grep -q '^X-KDE-Shortcuts=Print$' "$HOME/.local/share/applications/org.omarchy.capture.desktop" 2>/dev/null; then
+elif [[ $capture_action_ready == true ]]; then
   printf '%s\n' 'ok   Omarchy Print desktop action is installed'
 else
   printf '%s\n' 'FAIL Omarchy Print desktop action is not installed'
