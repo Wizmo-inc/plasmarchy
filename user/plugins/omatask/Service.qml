@@ -255,6 +255,18 @@ Item {
   // ------------------------------------------------------------- disk
   readonly property var diskDevices: disk.devices || []
   readonly property var filesystems: disk.filesystems || []
+  // The filesystem mounted at / is the system drive regardless of whether it
+  // appears as NVMe, LUKS/device-mapper, LVM, or a btrfs subvolume. Selecting
+  // by mount keeps removable USB disks out of the headline capacity reading.
+  readonly property var primaryFilesystem: {
+    for (var i = 0; i < filesystems.length; i++) {
+      if ((filesystems[i].mounts || []).indexOf("/") !== -1) return filesystems[i]
+    }
+    return null
+  }
+  readonly property real primaryDiskTotal: primaryFilesystem ? Number(primaryFilesystem.total) || 0 : 0
+  readonly property real primaryDiskAvailable: primaryFilesystem ? Number(primaryFilesystem.avail) || 0 : 0
+  readonly property real primaryDiskUsedPercent: primaryFilesystem ? Number(primaryFilesystem.percent) || 0 : 0
   readonly property var ioProcesses: latest.ioProcs || []
   readonly property int ioReadable: Number(latest.ioReadable) || 0
   readonly property int ioTotal: Number(latest.ioTotal) || 0

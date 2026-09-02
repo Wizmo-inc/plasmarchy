@@ -1793,6 +1793,9 @@ Item {
               reading: root.service ? Model.formatRate(root.service.disk.read) : "—"
               detail: root.service
                 ? "write " + Model.formatRate(root.service.disk.write)
+                  + (root.service.primaryDiskTotal > 0
+                    ? " · " + Model.formatBytes(root.service.primaryDiskAvailable) + " free"
+                    : "")
                 : ""
 
               Column {

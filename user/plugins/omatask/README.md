@@ -33,8 +33,8 @@ Omacut / Omacalc family. Everything a person reads says "Task Manager".
 
 | Surface | Reached by | Shows |
 |---|---|---|
-| **Bar widget** | always visible | CPU history graph and current percentage, and optionally a second metric — memory, swap or GPU — beside it |
-| **Panel** | click the widget | CPU graph, per-core grid, memory, swap, GPU, network and disk rates, busiest eight processes |
+| **Bar widget** | always visible | CPU history graph and current percentage, plus primary SSD free space by default; memory, swap or GPU can replace it |
+| **Panel** | click the widget | CPU graph, per-core grid, memory, swap, GPU, network and disk rates, primary SSD free space, busiest eight processes |
 | **Window** | `Expand` in the panel · right-click the widget | Five stat cards that each expand, plus the full process table with filter, sort, threads and signals |
 
 Neither surface claims a keybinding. To bind them, add to
@@ -204,6 +204,8 @@ counters, and listing it as active is a small lie.
 
 ### Disk — `Ctrl+D`
 
+- **Primary SSD capacity** — the bar and click panel show usable space left on
+  the filesystem mounted at `/`; removable drives never replace this headline.
 - **Graphs** — read, write, and *busiest device utilisation*. Throughput says
   how much is moving; utilisation says how hard the device is working to move
   it. A drive can sit at 100% util shifting very little.

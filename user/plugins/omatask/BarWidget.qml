@@ -46,11 +46,11 @@ Panel {
   readonly property string barGraph: String(setting("barGraph", "sparkline"))
   // Checked here rather than trusted: `omarchy bar set` writes whatever value
   // it is handed straight into shell.json without consulting the manifest
-  // schema, so a typo arrives intact. An unrecognised metric reads as off,
-  // instead of falling through to memory and captioning it wrongly.
+  // schema, so a typo arrives intact. An unrecognised metric falls back to the
+  // useful system-drive reading instead of captioning another metric wrongly.
   readonly property string secondaryMetric: {
-    var value = String(setting("secondaryMetric", "none"))
-    return ["mem", "swap", "gpu"].indexOf(value) >= 0 ? value : "none"
+    var value = String(setting("secondaryMetric", "disk"))
+    return ["mem", "swap", "gpu", "disk"].indexOf(value) >= 0 ? value : "disk"
   }
 
   // How many samples the in-bar graph shows. Deliberately shorter than the
@@ -66,7 +66,8 @@ Panel {
   // A second metric alongside CPU, so both are readable without opening
   // anything. Every candidate is already in the sample the shared service
   // receives each tick, so this costs a second strip of bar and nothing else —
-  // with one exception, noted at syncSecondaryGpu().
+  // with one exception, noted at syncSecondaryGpu(). Disk is a capacity
+  // reading rather than a history graph, so it uses the same compact slot.
   readonly property bool secondaryVisible: {
     if (!service || secondaryMetric === "none") return false
     // Plenty of Omarchy machines run zram or no swap, and a discrete GPU is
@@ -74,16 +75,19 @@ Panel {
     // never moves. Same reason the panel hides those rows outright.
     if (secondaryMetric === "swap") return service.swapTotal > 0
     if (secondaryMetric === "gpu") return service.hasGpu
+    if (secondaryMetric === "disk") return service.primaryDiskTotal > 0
     return true
   }
   readonly property real secondaryPercent: {
     if (!service) return 0
     if (secondaryMetric === "swap") return service.swapPercent
     if (secondaryMetric === "gpu") return service.gpuPercent
+    if (secondaryMetric === "disk") return service.primaryDiskUsedPercent
     return service.memPercent
   }
   readonly property var secondaryHistory: {
     if (!service) return []
+    if (secondaryMetric === "disk") return []
     var series = secondaryMetric === "swap" ? service.swapUsedHistory
       : secondaryMetric === "gpu" ? service.gpuHistory
       : service.memHistory
@@ -98,7 +102,11 @@ Panel {
   // reason.
   readonly property bool secondaryHot: secondaryMetric !== "swap" && secondaryPercent >= 90
   readonly property string secondaryLabel: secondaryMetric === "swap" ? "SWAP"
-    : secondaryMetric === "gpu" ? "GPU" : "MEM"
+    : secondaryMetric === "gpu" ? "GPU"
+    : secondaryMetric === "disk" ? "SSD" : "MEM"
+  readonly property string secondaryReading: secondaryMetric === "disk" && service
+    ? Model.formatBytes(service.primaryDiskAvailable, 0).replace(" ", "")
+    : ""
   // Nerd font glyphs, the same vocabulary the bar's indicators already speak.
   // They caption the pair and only the pair: one percentage beside a graph on a
   // system monitor needs no caption, and adding one would widen the widget for
@@ -111,6 +119,7 @@ Panel {
   readonly property string cpuIcon: ""          // oct-cpu
   readonly property string secondaryIcon: secondaryMetric === "swap" ? "󰓡"   // md-swap_horizontal
     : secondaryMetric === "gpu" ? "󰾲"   // md-expansion_card_variant
+    : secondaryMetric === "disk" ? "󰋊"   // md-harddisk
     : ""  // fa-memory
   readonly property var panelProcesses: {
     if (!service) return []
@@ -246,7 +255,10 @@ Panel {
       var parts = ["CPU " + Model.formatPercent(root.cpuPercent),
                    "MEM " + Model.formatPercent(root.service.memPercent)]
       if (root.secondaryVisible && root.secondaryMetric !== "mem") {
-        parts.push(root.secondaryLabel + " " + Model.formatPercent(root.secondaryPercent))
+        if (root.secondaryMetric === "disk")
+          parts.push("SSD " + Model.formatBytes(root.service.primaryDiskAvailable) + " free")
+        else
+          parts.push(root.secondaryLabel + " " + Model.formatPercent(root.secondaryPercent))
       }
       return parts.join(" · ")
     }
@@ -289,11 +301,12 @@ Panel {
       property real percent: 0
       property real ceiling: 100
       property bool hot: false
+      property string reading: ""
 
       spacing: Style.space(5)
 
       Sparkline {
-        visible: button.graphVisible
+        visible: button.graphVisible && metric.series.length > 1
         width: button.graphWidth
         height: Math.max(Style.space(9), button.barSize - Style.space(14))
         anchors.verticalCenter: parent.verticalCenter
@@ -320,9 +333,11 @@ Panel {
       }
 
       Text {
-        visible: root.showPercent || button.vertical
+        visible: metric.reading !== "" || root.showPercent || button.vertical
         anchors.verticalCenter: parent.verticalCenter
-        text: Math.round(metric.percent) + (button.vertical ? "" : "%")
+        text: metric.reading !== "" && !button.vertical
+          ? metric.reading
+          : Math.round(metric.percent) + (button.vertical ? "" : "%")
         color: metric.hot ? button.activeColor : button.foreground
         font.family: button.fontFamily
         font.pixelSize: Style.bar.iconFont
@@ -357,6 +372,7 @@ Panel {
         percent: root.secondaryPercent
         ceiling: root.secondaryCeiling
         hot: root.secondaryHot
+        reading: root.secondaryReading
       }
     }
   }
@@ -566,6 +582,23 @@ Panel {
             down: root.service ? Model.formatRate(root.service.disk.read) : "—"
             up: root.service ? Model.formatRate(root.service.disk.write) : "—"
           }
+        }
+
+        Meter {
+          ground: root.bar.background
+          width: parent.width
+          visible: root.service && root.service.primaryDiskTotal > 0
+          label: "SSD FREE"
+          value: root.service
+            ? Model.formatBytes(root.service.primaryDiskAvailable) + " FREE · "
+              + Math.round(100 - root.service.primaryDiskUsedPercent) + "%"
+            : ""
+          fraction: root.service ? Math.max(0, 1 - root.service.primaryDiskUsedPercent / 100) : 0
+          foreground: root.bar.foreground
+          fill: root.service && root.service.primaryDiskUsedPercent >= 90
+            ? root.bar.urgent : root.bar.foreground
+          fontFamily: root.bar.fontFamily
+          compact: true
         }
 
         // ---------- Processes ----------

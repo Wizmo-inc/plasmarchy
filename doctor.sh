@@ -30,6 +30,8 @@ check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.keyboard-layout/KeyboardLayout.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.show-desktop/ShowDesktop.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml"
+check_file "$HOME/.config/omarchy/plugins/omatask/Service.qml"
+check_file "$HOME/.config/omarchy/plugins/omatask/BarWidget.qml"
 check_file "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop/contents/code/main.js"
 if [[ -f $HOME/.config/omarchy/plugins/plasma.agents/Panel.qml ]] ||
    compgen -G "$HOME/.config/omarchy/plugins/*.agents/Panel.qml" >/dev/null; then
@@ -42,6 +44,15 @@ if rg -q 'setup\.default\.agent' "$HOME/.config/omarchy/plugins/plasma.agents/Pa
   printf '%s\n' 'ok   Agents right-click opens the agent chooser'
 else
   printf '%s\n' 'FAIL Agents right-click agent chooser route is missing'
+  failures=$((failures + 1))
+fi
+if rg -q 'primaryFilesystem' "$HOME/.config/omarchy/plugins/omatask/Service.qml" 2>/dev/null &&
+   rg -q 'primaryDiskAvailable' "$HOME/.config/omarchy/plugins/omatask/BarWidget.qml" 2>/dev/null &&
+   jq -e '.barWidget.defaults.secondaryMetric == "disk"' \
+     "$HOME/.config/omarchy/plugins/omatask/manifest.json" >/dev/null 2>&1; then
+  printf '%s\n' 'ok   Omatask shows free space on the primary system SSD'
+else
+  printf '%s\n' 'FAIL Omatask primary SSD free-space display is missing'
   failures=$((failures + 1))
 fi
 if rg -q '\$HOME/\.local/bin/omarchy-shell" shell summon plasma\.menu.*style\.theme' \
