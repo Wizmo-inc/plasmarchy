@@ -44,11 +44,14 @@ else
   printf '%s\n' 'FAIL Agents right-click agent chooser route is missing'
   failures=$((failures + 1))
 fi
-if rg -q '\$HOME/\.local/bin/omarchy-shell" shell summon plasma\.menu' \
-  "$HOME/.local/bin/plasmarchy-themes-handler" 2>/dev/null; then
-  printf '%s\n' 'ok   Themes handler always opens the Plasma style menu'
+if rg -q '\$HOME/\.local/bin/omarchy-shell" shell summon plasma\.menu.*style\.theme' \
+  "$HOME/.local/bin/plasmarchy-themes-handler" 2>/dev/null &&
+   rg -q 'localBin = Quickshell\.env\("HOME"\) \+ "/\.local/bin"' \
+     "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml" 2>/dev/null &&
+   [[ -x "$HOME/.local/bin/omarchy-menu-images" ]]; then
+  printf '%s\n' 'ok   Themes handler opens the Omarchy selector through Plasma IPC'
 else
-  printf '%s\n' 'FAIL Themes handler does not reliably open the Plasma style menu'
+  printf '%s\n' 'FAIL Themes handler cannot open the Omarchy selector through Plasma IPC'
   failures=$((failures + 1))
 fi
 check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml"
@@ -65,6 +68,7 @@ check_file "$HOME/.local/bin/plasmarchy-quicklaunch"
 check_file "$HOME/.local/bin/plasmarchy-open-agent"
 check_file "$HOME/.local/bin/plasmarchy-agent-menu-refresh"
 check_file "$HOME/.local/bin/plasmarchy-themes-handler"
+check_file "$HOME/.local/bin/omarchy-menu-images"
 check_file "$HOME/.local/share/kio/servicemenus/plasmarchy-open-with-agent.desktop"
 check_file "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder/contents/ui/FolderViewLayer.qml"
 

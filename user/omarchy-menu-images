@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Keep Omarchy's image selector implementation, but let its IPC call resolve
+# to Plasmarchy's Plasma-aware omarchy-shell wrapper when launched by the
+# Plasma menu.
+exec /usr/bin/omarchy-menu-images "$@"

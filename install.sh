@@ -176,6 +176,7 @@ backup "$HOME/.config/mimeapps.list"
 backup "$HOME/.config/kwinrc"
 backup "$HOME/.config/omarchy/hooks/theme-set.d/plasma-hybrid.hook"
 backup "$HOME/.local/bin/omarchy-shell"
+backup "$HOME/.local/bin/omarchy-menu-images"
 backup "$HOME/.local/bin/omarchy-capture-screenshot"
 backup "$HOME/.local/bin/omarchy-capture-region"
 backup "$HOME/.local/bin/omarchy-capture-screenrecording"
@@ -243,6 +244,7 @@ for item in Commons Ui plugins services; do
 done
 
 install -m 0755 "$repo_dir/user/omarchy-shell" "$HOME/.local/bin/omarchy-shell"
+install -m 0755 "$repo_dir/user/omarchy-menu-images" "$HOME/.local/bin/omarchy-menu-images"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenshot" "$HOME/.local/bin/omarchy-capture-screenshot"
 install -m 0755 "$repo_dir/user/omarchy-capture-region" "$HOME/.local/bin/omarchy-capture-region"
 install -m 0755 "$repo_dir/user/omarchy-capture-screenrecording" "$HOME/.local/bin/omarchy-capture-screenrecording"

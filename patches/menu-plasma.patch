@@ -22,13 +22,15 @@
    // Bound to the central [menu] section in shell.toml via Color.qml.
    // Each color already includes its alpha companion (composed in the
    // singleton), so consumers can drop them straight into a Rectangle.
-@@ -137,3 +143,5 @@
+@@ -137,3 +143,7 @@
    function runAction(action) {
      var command = String(action || "")
 +    if (command === "omarchy-system-reboot")
 +      command = Quickshell.env("HOME") + "/.local/bin/omarchy-system-reboot"
      if (!command) return
-@@ -141,6 +149,56 @@
++    var localBin = Quickshell.env("HOME") + "/.local/bin"
++    command = "export PATH=" + Util.shellQuote(localBin) + ":$PATH; " + command
+@@ -141,6 +151,56 @@
      Util.execDetached(command)
    }
  
