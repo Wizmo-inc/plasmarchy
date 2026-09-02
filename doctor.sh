@@ -30,6 +30,7 @@ check_file "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.keyboard-layout/KeyboardLayout.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.show-desktop/ShowDesktop.qml"
 check_file "$HOME/.config/omarchy/plugins/plasma.menu/Menu.qml"
+check_file "$HOME/.config/omarchy/plugins/plasma.tray/Tray.qml"
 check_file "$HOME/.config/omarchy/plugins/omatask/Service.qml"
 check_file "$HOME/.config/omarchy/plugins/omatask/BarWidget.qml"
 check_file "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop/contents/code/main.js"
@@ -122,6 +123,16 @@ if rg -q 'id: appActionsPanel' \
   printf '%s\n' 'ok   application pin menu stays open for selection'
 else
   printf '%s\n' 'FAIL application pin menu can dismiss before selection'
+  failures=$((failures + 1))
+fi
+
+if jq -e '.bar.layout.right[] | select(.id == "plasma.tray")' \
+     "$HOME/.config/omarchy/plasma-shell.json" >/dev/null 2>&1 &&
+   [[ $(rg -c 'KeyboardPanel \{' "$HOME/.config/omarchy/plugins/plasma.tray/Tray.qml" 2>/dev/null) -ge 2 ]] &&
+   ! rg -q 'PopupCard \{' "$HOME/.config/omarchy/plugins/plasma.tray/Tray.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   background-app tray menus stay above Plasma windows'
+else
+  printf '%s\n' 'FAIL background-app tray menus can be hidden behind Plasma windows'
   failures=$((failures + 1))
 fi
 
@@ -321,10 +332,12 @@ else
   failures=$((failures + 1))
 fi
 
-if rg -q 'Pin to Plasmarchy bar' "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml" 2>/dev/null; then
-  printf '%s\n' 'ok   running windows can be pinned directly from the taskbar'
+if rg -q 'Pin to Plasmarchy bar' "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml" 2>/dev/null &&
+   rg -q 'KeyboardPanel' "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml" 2>/dev/null &&
+   ! rg -q 'QQC\.Menu|Popup\.Window' "$HOME/.config/omarchy/plugins/plasma.tasks/Tasks.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   running-window actions use a visible layer-shell menu'
 else
-  printf '%s\n' 'FAIL taskbar pin action is missing'
+  printf '%s\n' 'FAIL taskbar actions are missing or use an obscurable popup menu'
   failures=$((failures + 1))
 fi
 

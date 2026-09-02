@@ -157,7 +157,7 @@ done < <(find "$HOME/.local/share/icons" -mindepth 1 -maxdepth 1 -type d \
 restore_or_remove "$HOME/.local/share/plasma/plasmoids/org.kde.plasma.folder"
 restore_or_remove "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 restore_or_remove "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop plasma.agents plasma.menu omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop plasma.agents plasma.menu plasma.tray omatask; do
   restore_or_remove "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 restore_or_remove "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"

@@ -120,10 +120,15 @@ no logout or restart is required.
 You can also right-click any running app on the bar and choose **Pin to
 Plasmarchy bar**. Its running task merges into the pinned icon: click it to
 restore or minimize, right-click it to close or unpin, and use the same icon to
-launch the app again after it has closed.
+launch the app again after it has closed. Task menus use an always-on-top shell
+surface, so they remain visible even while another application window is open.
 
 Advanced users can still edit the `launchers` array on the `plasma.tasks`
 entry in `~/.config/omarchy/plasma-shell.json`.
+
+Telegram, Zoom, and other applications that remain active after closing their
+window live in the system tray. Their right-click menus use a Plasma overlay
+surface, keeping every app-provided action visible above normal windows.
 
 ### Switch keyboard layouts
 

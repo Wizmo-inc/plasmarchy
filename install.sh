@@ -205,7 +205,7 @@ backup "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid"
 backup "$HOME/.local/share/kwin/scripts/plasmarchy-show-desktop"
 backup "$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
 backup "$HOME/.config/plasma-org.omarchy.plasma.hybrid-appletsrc"
-for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop plasma.agents plasma.menu omatask; do
+for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-layout plasma.show-desktop plasma.agents plasma.menu plasma.tray omatask; do
   backup "$HOME/.config/omarchy/plugins/$plugin_id"
 done
 
@@ -231,6 +231,25 @@ for plugin_id in plasma.launcher plasma.tasks plasma.workspaces plasma.keyboard-
   rm -rf -- "$HOME/.config/omarchy/plugins/$plugin_id"
   cp -a -- "$repo_dir/user/plugins/$plugin_id" "$HOME/.config/omarchy/plugins/$plugin_id"
 done
+
+# The stock tray uses xdg PopupWindow surfaces and a Hyprland-only focus grab.
+# Clone it under a user-owned id and move both menus to KeyboardPanel so KWin
+# keeps them above normal application windows and dismisses them reliably.
+rm -rf -- "$HOME/.config/omarchy/plugins/plasma.tray"
+mkdir -p "$HOME/.config/omarchy/plugins/plasma.tray"
+install -m 0644 "$omarchy_root/shell/plugins/bar/widgets/Tray.qml" \
+  "$HOME/.config/omarchy/plugins/plasma.tray/Tray.qml"
+install -m 0644 "$omarchy_root/shell/plugins/bar/widgets/TrayModel.js" \
+  "$HOME/.config/omarchy/plugins/plasma.tray/TrayModel.js"
+install -m 0644 "$omarchy_root/shell/plugins/bar/widgets/Tray.manifest.json" \
+  "$HOME/.config/omarchy/plugins/plasma.tray/manifest.json"
+perl -pi -e 's/omarchy\.tray/plasma.tray/g' \
+  "$HOME/.config/omarchy/plugins/plasma.tray/manifest.json" \
+  "$HOME/.config/omarchy/plugins/plasma.tray/Tray.qml"
+if ! patch --silent --forward -d "$HOME/.config/omarchy/plugins/plasma.tray" -p1 < "$repo_dir/patches/tray-plasma.patch"; then
+  printf '%s\n' 'The Plasmarchy system-tray patch does not match this Omarchy version.' >&2
+  exit 1
+fi
 
 rm -rf -- "$HOME/.config/omarchy/plugins/plasma.agents"
 cp -a -- "$omarchy_root/shell/plugins/agents" "$HOME/.config/omarchy/plugins/plasma.agents"

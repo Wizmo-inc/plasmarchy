@@ -1,0 +1,27 @@
+--- a/Tray.qml
++++ b/Tray.qml
+@@ -397,7 +397,7 @@
+     }
+   }
+ 
+-  PopupCard {
++  KeyboardPanel {
+     id: managePopup
+     anchorItem: root
+     owner: root
+@@ -518,7 +518,7 @@
+     menu: root.activeTrayItem ? root.activeTrayItem.menu : null
+   }
+ 
+-  PopupCard {
++  KeyboardPanel {
+     id: trayMenuPopup
+     anchorItem: root.activeTrayAnchor || root
+     owner: root
+@@ -532,7 +532,7 @@
+     onVisibleChanged: if (!visible) root.resetTrayMenu()
+     padding: Style.space(8)
+-    borderColor: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.45)
++    borderSpec: Border.surfaceSpec("popups", "border", Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.45), Math.max(1, Style.space(2)))
+     contentWidth: trayMenuPopup.fittedContentWidth(Style.space(232))
+     contentHeight: trayMenuPopup.fittedContentHeight(menuHeaderHeight + trayMenuColumn.implicitHeight, Style.space(420))

@@ -1,14 +1,18 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import QtQuick.Controls as QQC
 import org.kde.kirigami as Kirigami
 import qs.Commons
 import qs.Ui
 
-BarWidget {
+Panel {
   id: root
   moduleName: "plasma.tasks"
+
+  // Panel owns the reliable layer-shell popup lifecycle; keep the two bar
+  // geometry conveniences that BarWidget previously supplied.
+  readonly property bool vertical: bar ? bar.vertical : false
+  readonly property int barSize: bar ? bar.barSize : Style.bar.sizeHorizontal
 
   property var launchers: setting("launchers", [
     { title: "Files", icon: "system-file-manager", command: ["dolphin"] },
@@ -19,6 +23,16 @@ BarWidget {
   property string lastActivatedId: ""
   property var contextTask: null
   property var contextLauncher: null
+  property real contextAnchorX: width / 2
+
+  function showTaskMenu(anchor, task, launcher) {
+    if (!anchor) return
+    var point = anchor.mapToItem(root, anchor.width / 2, 0)
+    contextAnchorX = Math.max(0, Math.min(root.width, point.x))
+    contextTask = task
+    contextLauncher = launcher
+    open()
+  }
 
   function normalizedDesktopId(value) {
     return String(value || "").replace(/\.desktop$/, "").toLowerCase()
@@ -110,6 +124,7 @@ BarWidget {
 
   function requestCloseTask(task) {
     if (!task) return
+    close()
     contextTask = task
     Quickshell.execDetached([
       "qdbus6", "org.kde.KWin", "/WindowsRunner",
@@ -120,6 +135,7 @@ BarWidget {
 
   function requestPin(task) {
     if (!task || !task.desktopId) return
+    close()
     Quickshell.execDetached([
       Quickshell.env("HOME") + "/.local/bin/plasmarchy-quicklaunch",
       "pin", task.desktopId, task.appName || task.title, task.icon
@@ -128,6 +144,7 @@ BarWidget {
 
   function requestUnpin(launcher) {
     if (!launcher || !launcher.desktopId) return
+    close()
     Quickshell.execDetached([
       Quickshell.env("HOME") + "/.local/bin/plasmarchy-quicklaunch",
       "unpin", launcher.desktopId, launcher.title || "Application", launcher.icon || ""
@@ -172,83 +189,95 @@ BarWidget {
     }
   }
 
-  QQC.Menu {
+  // Keep the anchor alive while the task list refreshes every 1.5 seconds.
+  // Anchoring directly to a Repeater delegate lets that delegate disappear
+  // underneath an open menu when a fresh KWin listing replaces the model.
+  Item {
+    id: contextMenuAnchor
+    x: root.contextAnchorX
+    y: 0
+    width: 1
+    height: root.height
+  }
+
+  KeyboardPanel {
     id: taskMenu
-    width: Style.space(190)
-    popupType: QQC.Popup.Window
-    modal: false
-    closePolicy: QQC.Popup.CloseOnEscape
-               | QQC.Popup.CloseOnPressOutside
-    padding: Style.space(5)
+    anchorItem: contextMenuAnchor
+    owner: root
+    bar: root.bar
+    open: root.opened
+    focusTarget: menuKeys
+    contentWidth: taskMenu.fittedContentWidth(Style.space(190))
+    contentHeight: taskMenu.fittedContentHeight(taskActionColumn.implicitHeight)
 
-    background: Rectangle {
-      color: Color.menu.background
-      radius: Style.cornerRadius
-      border.width: 1
-      border.color: Color.menu.border
-    }
+    PanelKeyCatcher {
+      id: menuKeys
+      anchors.fill: parent
+      onCloseRequested: root.close()
 
-    QQC.MenuItem {
-      id: pinAction
-      visible: root.contextTask !== null
-               && root.contextLauncher === null
-               && Boolean(root.contextTask.desktopId)
-               && root.launcherForTask(root.contextTask) === null
-      height: visible ? Style.space(38) : 0
-      text: "Pin to Plasmarchy bar"
-      onTriggered: root.requestPin(root.contextTask)
-      contentItem: Text {
-        text: pinAction.text
-        color: pinAction.highlighted ? Color.menu.selectedText : Color.menu.text
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-      }
-      background: Rectangle {
-        color: pinAction.highlighted ? Color.menu.selectedBackground : "transparent"
-        radius: Style.cornerRadius
-      }
-    }
+      Column {
+        id: taskActionColumn
+        width: parent.width
+        spacing: Style.space(3)
 
-    QQC.MenuItem {
-      id: unpinAction
-      visible: root.contextLauncher !== null
-      height: visible ? Style.space(38) : 0
-      text: "Unpin from Plasmarchy bar"
-      onTriggered: root.requestUnpin(root.contextLauncher)
-      contentItem: Text {
-        text: unpinAction.text
-        color: unpinAction.highlighted ? Color.menu.selectedText : Color.menu.text
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-      }
-      background: Rectangle {
-        color: unpinAction.highlighted ? Color.menu.selectedBackground : "transparent"
-        radius: Style.cornerRadius
+        TaskMenuAction {
+          shown: root.contextTask !== null
+                 && root.contextLauncher === null
+                 && Boolean(root.contextTask.desktopId)
+                 && root.launcherForTask(root.contextTask) === null
+          label: "Pin to Plasmarchy bar"
+          onTriggered: root.requestPin(root.contextTask)
+        }
+
+        TaskMenuAction {
+          shown: root.contextLauncher !== null
+          label: "Unpin from Plasmarchy bar"
+          onTriggered: root.requestUnpin(root.contextLauncher)
+        }
+
+        TaskMenuAction {
+          shown: root.contextTask !== null
+          label: "Close window"
+          onTriggered: root.requestCloseTask(root.contextTask)
+        }
       }
     }
+  }
 
-    QQC.MenuItem {
-      id: closeAction
-      visible: root.contextTask !== null
-      height: visible ? Style.space(38) : 0
-      text: "Close window"
-      onTriggered: root.requestCloseTask(root.contextTask)
-      contentItem: Text {
-        text: closeAction.text
-        color: closeAction.highlighted ? Color.menu.selectedText : Color.menu.text
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-      }
-      background: Rectangle {
-        color: closeAction.highlighted ? Color.menu.selectedBackground : "transparent"
-        radius: Style.cornerRadius
-      }
+  component TaskMenuAction: Rectangle {
+    id: actionRow
+
+    property string label: ""
+    property bool shown: true
+    signal triggered()
+
+    visible: shown
+    width: parent ? parent.width : 0
+    height: visible ? Style.space(38) : 0
+    radius: Style.cornerRadius
+    color: actionMouse.containsMouse
+      ? Style.hoverFillFor(Color.popups.text, Color.accent)
+      : "transparent"
+
+    Text {
+      anchors.fill: parent
+      anchors.leftMargin: Style.space(10)
+      anchors.rightMargin: Style.space(10)
+      text: actionRow.label
+      color: actionMouse.containsMouse ? Color.accent : Color.popups.text
+      font.family: root.bar ? root.bar.fontFamily : Style.font.family
+      font.pixelSize: Style.font.body
+      horizontalAlignment: Text.AlignHCenter
+      verticalAlignment: Text.AlignVCenter
+      elide: Text.ElideRight
+    }
+
+    MouseArea {
+      id: actionMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: actionRow.triggered()
     }
   }
 
@@ -318,13 +347,7 @@ BarWidget {
           onClicked: function(event) {
             if (event.button === Qt.RightButton) {
               if (root.bar) root.bar.hideTooltip(launcher)
-              root.contextLauncher = launcher.modelData
-              root.contextTask = launcher.matchingTask
-              taskMenu.popup(
-                launcher,
-                Math.round((launcher.width - taskMenu.width) / 2),
-                -taskMenu.implicitHeight - Style.space(6)
-              )
+              root.showTaskMenu(launcher, launcher.matchingTask, launcher.modelData)
             } else if (event.button === Qt.MiddleButton && launcher.matchingTask) {
               root.requestCloseTask(launcher.matchingTask)
             } else if (launcher.matchingTask) {
@@ -411,13 +434,7 @@ BarWidget {
           onClicked: function(event) {
             if (event.button === Qt.RightButton) {
               if (root.bar) root.bar.hideTooltip(task)
-              root.contextTask = task.modelData
-              root.contextLauncher = null
-              taskMenu.popup(
-                task,
-                Math.round((task.width - taskMenu.width) / 2),
-                -taskMenu.implicitHeight - Style.space(6)
-              )
+              root.showTaskMenu(task, task.modelData, null)
             } else if (event.button === Qt.MiddleButton) {
               root.requestCloseTask(task.modelData)
             } else {
