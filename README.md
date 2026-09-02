@@ -72,13 +72,13 @@ the optional panel and login-screen changes explicitly.
 
 ## Install
 
-On a fresh Omarchy installation, clone the project and let it install Plasma
-and the required Arch packages:
+On a fresh Omarchy installation, clone the project and let it install Plasma,
+the required Arch packages, the replacement panel, and the Omarchy SDDM login:
 
 ```bash
 git clone https://github.com/Wizmo-inc/plasmarchy.git
 cd plasmarchy
-./install.sh --install-deps --replace-panel
+./install.sh --install-deps --replace-panel --with-sddm
 ```
 
 If Plasma is already installed, omit `--install-deps`.
@@ -86,7 +86,8 @@ If Plasma is already installed, omit `--install-deps`.
 `--replace-panel` removes existing Plasma panels after backing up the Plasma
 layout. Omit it to keep those panels alongside the Omarchy bar.
 
-To also install the minimal Omarchy login screen and disable SDDM autologin:
+If Plasma and its dependencies are already installed, the complete integration
+can be applied with:
 
 ```bash
 ./install.sh --replace-panel --with-sddm
@@ -94,7 +95,9 @@ To also install the minimal Omarchy login screen and disable SDDM autologin:
 
 The SDDM option is the only part that requests `sudo`. It copies visual assets
 from the Omarchy theme already installed on your machine; this repository does
-not redistribute those assets.
+not redistribute those assets. SDDM reads every file in its configuration
+directory, so the installer removes both active and legacy renamed autologin
+files after backing them up.
 
 Managed state and desktop entries are written through restrictive randomized
 temporary files, flushed, and atomically replaced. The installer refuses

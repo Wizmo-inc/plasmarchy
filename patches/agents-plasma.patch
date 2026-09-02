@@ -7,7 +7,7 @@
 +      "qs", "ipc", "-n", "-p",
 +      Quickshell.env("HOME") + "/.config/quickshell/plasma-omarchy",
 +      "call", "--", "shell", "summon", "omarchy.menu",
-+      JSON.stringify({ "menu": "agent" })
++      JSON.stringify({ "menu": "setup.default.agent" })
 +    ])
      root.close()
    }

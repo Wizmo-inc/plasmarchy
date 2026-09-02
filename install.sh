@@ -434,11 +434,17 @@ if $with_sddm; then
   sudo sync -f /usr/local/share/sddm/themes
   printf '%s\n' '[Theme]' 'ThemeDir=/usr/local/share/sddm/themes' 'Current=omarchy-plasma' | \
     atomic_sudo_write /etc/sddm.conf.d/zz-omarchy-plasma-theme.conf 0644
-  if sudo test -e /etc/sddm.conf.d/autologin.conf; then
-    assert_system_path_safe /etc/sddm.conf.d/autologin.conf
-    assert_system_path_safe /etc/sddm.conf.d/autologin.conf.disabled
-    sudo mv -T -- /etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf.disabled
-  fi
+  # SDDM loads every file in /etc/sddm.conf.d, so renaming an autologin file
+  # to *.disabled does not disable it. Both the active file and the legacy
+  # suffix used by older Plasmarchy releases have already been backed up
+  # above; remove them from SDDM's configuration directory entirely.
+  for autologin_file in /etc/sddm.conf.d/autologin.conf \
+                        /etc/sddm.conf.d/autologin.conf.disabled; do
+    if sudo test -e "$autologin_file"; then
+      assert_system_path_safe "$autologin_file"
+      sudo rm -f -- "$autologin_file"
+    fi
+  done
   printf '%s\n' 'with_sddm=true' | atomic_write "$state_dir/system-install.env" 0600
 else
   printf '%s\n' 'with_sddm=false' | atomic_write "$state_dir/system-install.env" 0600

@@ -38,6 +38,12 @@ else
   printf '%s\n' 'FAIL Agents plugin'
   failures=$((failures + 1))
 fi
+if rg -q 'setup\.default\.agent' "$HOME/.config/omarchy/plugins/plasma.agents/Panel.qml" 2>/dev/null; then
+  printf '%s\n' 'ok   Agents right-click opens the agent chooser'
+else
+  printf '%s\n' 'FAIL Agents right-click agent chooser route is missing'
+  failures=$((failures + 1))
+fi
 check_file "$HOME/.local/share/plasma/shells/org.omarchy.plasma.hybrid/contents/lockscreen/LockScreenUi.qml"
 check_file "$HOME/.local/bin/omarchy-capture-screenshot"
 check_file "$HOME/.local/bin/omarchy-capture-region"

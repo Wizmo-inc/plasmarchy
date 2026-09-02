@@ -163,16 +163,21 @@ if [[ -f $state_dir/system-install.env && ! -L $state_dir/system-install.env ]] 
     restore_root_file "$backup_dir/etc/sddm.conf.d/zz-omarchy-plasma-theme.conf" \
       /etc/sddm.conf.d/zz-omarchy-plasma-theme.conf
   fi
+  assert_system_path_safe /etc/sddm.conf.d/autologin.conf
+  assert_system_path_safe /etc/sddm.conf.d/autologin.conf.disabled
+  sudo rm -f -- /etc/sddm.conf.d/autologin.conf \
+                /etc/sddm.conf.d/autologin.conf.disabled
   if [[ -f $backup_dir/etc/sddm.conf.d/autologin.conf &&
         ! -L $backup_dir/etc/sddm.conf.d/autologin.conf ]]; then
-    assert_system_path_safe /etc/sddm.conf.d/autologin.conf.disabled
-    sudo rm -f -- /etc/sddm.conf.d/autologin.conf.disabled
     restore_root_file "$backup_dir/etc/sddm.conf.d/autologin.conf" \
       /etc/sddm.conf.d/autologin.conf
   elif [[ -f $backup_dir/etc/sddm.conf.d/autologin.conf.disabled &&
           ! -L $backup_dir/etc/sddm.conf.d/autologin.conf.disabled ]]; then
+    # Older installers left this file in SDDM's live directory. It is the
+    # user's original autologin configuration, so restore it under the active
+    # name rather than reviving another file SDDM will still load.
     restore_root_file "$backup_dir/etc/sddm.conf.d/autologin.conf.disabled" \
-      /etc/sddm.conf.d/autologin.conf.disabled
+      /etc/sddm.conf.d/autologin.conf
   fi
 fi
 
